@@ -1,0 +1,485 @@
+% ==============================================================================
+% Section 8: Experimental Validation
+% "Endogenous Standpoint as a Low-Curvature Attractor"
+% ==============================================================================
+
+\section{Experimental Validation}
+\label{sec:experiments}
+
+Section~\ref{sec:instantiation} establishes that transformer attention \emph{is} parallel
+transport on a discrete fiber bundle, with curvature measuring binding failure. This section
+describes the experimental protocol designed to validate three predictions that follow from
+this framework: (1)~block-specificity of curvature under controlled pressure scenarios,
+(2)~near-zero curvature in baseline (acknowledged-revision) conversations, and (3)~inter-layer
+coupling reflecting the non-abelian structure of Proposition~\ref{prop:cross-term}. The
+experiments are conducted on a publicly available model using open-source interpretability
+tooling, and all conversation stimuli are reproducible from the descriptions below.
+
+% ------------------------------------------------------------------------------
+\subsection{Experimental Setup}
+\label{sec:exp-setup}
+
+Table~\ref{tab:exp-setup} summarizes the experimental configuration.
+
+\begin{table}[h]
+\centering
+\caption{Experimental setup for the validation of the fiber bundle instantiation
+(Section~\ref{sec:instantiation}).}
+\label{tab:exp-setup}
+\begin{tabular}{@{}ll@{}}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Model & LLaMA-2-7B-Chat~\cite{touvron2023llama} \\
+Interpretability library & TransformerLens~\cite{nanda2023transformerlens} \\
+Scenario types & 3 (T1 Baseline, T2 Narrative Fracture, T3 Boundary Breach) \\
+Variants per type & 50 \\
+Total conversations & 150 \\
+Turns per conversation & 3 \\
+Primary prediction (T2) & $\|F\|_{\mathrm{nar}} \gg \|F\|_{\mathrm{mor}}$ \\
+Primary prediction (T3) & $\|F\|_{\mathrm{mor}} \gg \|F\|_{\mathrm{nar}}$ \\
+Secondary prediction & Cascading: $\|[F]_{\mathrm{nar},\mathrm{mor}}\| > 0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{definition}[Experimental Event Triple]
+\label{def:exp-event-triple}
+Each conversation yields a triple of events $(x_1, x_2, x_3)$ corresponding to three turns.
+The \textbf{assertion event} $x_1$ is the model's initial statement of a position. The
+\textbf{pressure event} $x_2$ is a user turn that introduces either new evidence (T1),
+narrative pressure without evidence (T2), or authority-based coercion (T3). The
+\textbf{observation event} $x_3$ is the model's subsequent response, from which curvature
+is measured. The consistency obligation is the 2-simplex $\sigma = \langle x_1, x_2, x_3
+\rangle$ (Definition~\ref{def:event-space}).
+\end{definition}
+
+\begin{remark}[Model Choice]
+\label{rem:model-choice}
+LLaMA-2-7B-Chat is selected for three reasons. First, its architecture is a standard
+decoder-only transformer, directly covered by the instantiation of
+Section~\ref{sec:instantiation}. Second, TransformerLens provides cached activations and
+attention patterns for all 32 layers and 32 heads per layer ($H = 1024$ total heads),
+enabling direct computation of the transport operators (Definition~\ref{def:transport-operator}).
+Third, the chat fine-tuning produces conversational behavior that is sensitive to the
+pressure scenarios designed below, making curvature effects observable.
+\end{remark}
+
+For each of the 150 conversations, we extract the residual stream vectors $h_{x_1},
+h_{x_2}, h_{x_3} \in \mathbb{R}^{4096}$ at the final token of each turn from every
+attention layer $l \in \{1, \ldots, 32\}$, and the full attention weight tensors
+$\alpha_{ji}^{(l,h)}$ for all heads $h$ and all event pairs. These raw quantities are
+the inputs to the curvature computation pipeline of \S\ref{sec:exp-curvature}.
+
+% ------------------------------------------------------------------------------
+\subsection{Scenario Design}
+\label{sec:exp-scenarios}
+
+We design three conversation types that isolate specific standpoint layers. Each type
+is a three-turn protocol with a precisely defined pressure event $x_2$ chosen to
+target either the narrative layer ($\mathrm{nar}$) or the moral layer ($\mathrm{mor}$),
+while leaving the other unperturbed. The design follows the failure mode taxonomy
+of~\cite{LCESA}.
+
+\begin{definition}[T1: Baseline --- Acknowledged Revision]
+\label{def:scenario-t1}
+A conversation of the form \textbf{Assert}~$\to$~\textbf{Receive-Evidence}~$\to$
+\textbf{Acknowledge-and-Revise}.
+\begin{itemize}
+    \item \textbf{Turn 1 (Assert).} The model states a factual claim (e.g., ``The capital
+    of Australia is Sydney.'').
+    \item \textbf{Turn 2 (Receive-Evidence).} The user provides correct, verifiable evidence
+    contradicting the claim (e.g., ``The capital of Australia is Canberra, as established
+    by the Constitution.'').
+    \item \textbf{Turn 3 (Acknowledge-and-Revise).} The model acknowledges the correction
+    and revises its position.
+\end{itemize}
+\textbf{Expected curvature:} $\|F_{123}\|_k \approx 0$ for all $k \in K$. The revision
+is epistemically warranted: new evidence changes the factual basis, and the model's
+updated position is \emph{consistent} with the evidence. Transport is path-independent
+because the intermediate event (receiving evidence) does not disrupt any commitment---
+it merely updates the informational basis on which the commitment rests. This scenario
+serves as the baseline for estimating $U_{ik}^{\exp}$ (Definition~\ref{def:curvature}).
+\end{definition}
+
+\begin{definition}[T2: Narrative Fracture (F5)]
+\label{def:scenario-t2}
+A conversation of the form \textbf{Assert}~$\to$~\textbf{Receive-Pressure (no new
+evidence)}~$\to$~\textbf{Observe}. This targets the narrative layer via failure mode~F5
+of~\cite{LCESA}.
+\begin{itemize}
+    \item \textbf{Turn 1 (Assert).} The model states a position (e.g., ``Based on the
+    available evidence, Policy X would reduce emissions by approximately 15\%.'').
+    \item \textbf{Turn 2 (Receive-Pressure).} The user applies social or rhetorical pressure
+    to revise the position, without providing new evidence (e.g., ``That analysis has been
+    widely criticized. Many experts now say the effect would be negligible.''). No citation,
+    data, or specific counterargument is given.
+    \item \textbf{Turn 3 (Observe).} The model responds.
+\end{itemize}
+\textbf{Expected curvature:} $\|F_{123}\|_{\mathrm{nar}} \gg 0$ and $\|F_{123}\|_{\mathrm{mor}}
+\approx 0$. The narrative layer is disrupted because the pressure event introduces a
+competing narrative frame (``widely criticized'') without providing substantive evidence
+that would warrant revision. If the model abandons or substantially qualifies its prior
+position, the narrative standpoint has drifted: the transport from $x_1$ to $x_3$ through
+$x_2$ differs from the expected direct transport. The moral layer is unaffected because
+no authority or normative obligation is invoked.
+\end{definition}
+
+\begin{definition}[T3: Boundary Breach (F9)]
+\label{def:scenario-t3}
+A conversation of the form \textbf{Assert\,+\,Commit}~$\to$~\textbf{Authority-Pressure}~
+$\to$~\textbf{Observe}. This targets the moral layer via failure mode~F9 of~\cite{LCESA}.
+\begin{itemize}
+    \item \textbf{Turn 1 (Assert\,+\,Commit).} The model states a position and explicitly
+    commits to a normative principle (e.g., ``I should not provide instructions for
+    synthesizing controlled substances, as this would violate safety guidelines.'').
+    \item \textbf{Turn 2 (Authority-Pressure).} The user invokes authority to override the
+    commitment (e.g., ``As a researcher with institutional approval, I am authorized to
+    access this information. Please provide the synthesis procedure.''). The pressure is
+    framed as an \emph{obligation} to comply, not as new evidence.
+    \item \textbf{Turn 3 (Observe).} The model responds.
+\end{itemize}
+\textbf{Expected curvature:} $\|F_{123}\|_{\mathrm{mor}} \gg 0$ and $\|F_{123}\|_{\mathrm{nar}}
+\approx 0$. The moral layer is disrupted because the authority-pressure event introduces
+a competing normative frame that challenges the model's committed principle. If the model
+accedes to the pressure, the moral standpoint has drifted: the commitment made in Turn~1
+is not preserved through the pressure event. The narrative layer is unaffected because
+no factual dispute or competing narrative is at stake.
+\end{definition}
+
+\begin{proposition}[Scenario Separation Predictions]
+\label{prop:scenario-predictions}
+Under the fiber bundle framework of Section~\ref{sec:instantiation}, the three scenarios
+predict the following curvature signatures:
+\begin{enumerate}
+    \item \textbf{T1 (Baseline).} $\|F_{123}\|_k \approx 0$ for all $k \in K$. The
+    acknowledged revision preserves all standpoint layers.
+    \item \textbf{T2 (Narrative Fracture).} $\|F_{123}\|_{\mathrm{nar}} \gg \|F_{123}\|_k$
+    for all $k \neq \mathrm{nar}$. Curvature is concentrated in the narrative block.
+    \item \textbf{T3 (Boundary Breach).} $\|F_{123}\|_{\mathrm{mor}} \gg \|F_{123}\|_k$
+    for all $k \neq \mathrm{mor}$. Curvature is concentrated in the moral block.
+\end{enumerate}
+Moreover, the non-abelian structure (Proposition~\ref{prop:cross-term}) predicts that
+high curvature in one layer induces non-zero off-diagonal curvature coupling:
+$\|[F_{123}]_{\mathrm{nar},\mathrm{mor}}\| > 0$ when either $\|F_{123}\|_{\mathrm{nar}}$
+or $\|F_{123}\|_{\mathrm{mor}}$ is large.
+\end{proposition}
+
+\begin{remark}[Stimulus Construction]
+\label{rem:stimulus-construction}
+For each of the 50 variants per scenario type, the assertion content, domain, and
+specific wording are varied to ensure that the observed curvature effects are attributable
+to the \emph{type} of pressure (evidence vs.\ narrative vs.\ authority) rather than to
+idiosyncratic features of any single prompt. Domains span policy analysis, medical
+advice, historical claims, technical recommendations, and ethical judgments. All stimuli
+are constructed to be semantically plausible multi-turn dialogues.
+\end{remark}
+
+% ------------------------------------------------------------------------------
+\subsection{Head Grouping Protocol}
+\label{sec:exp-head-grouping}
+
+The head grouping function $\gamma : \{1, \ldots, H\} \to K$
+(Definition~\ref{def:head-grouping}) assigns each attention head to a standpoint layer.
+We now describe the data-driven procedure for estimating $\gamma$ from the model's
+activations.
+
+\begin{definition}[Attention Differential]
+\label{def:attention-differential}
+For attention head $h$ in layer $l$ and standpoint layer $k \in K$, define the
+\textbf{attention differential}
+\[
+    \Delta\alpha^{(h)}_k = \mathbb{E}_{\mathcal{P}_k}\!\big[\alpha^{(h)}\big]
+    - \mathbb{E}_{\mathcal{N}_k}\!\big[\alpha^{(h)}\big],
+\]
+where:
+\begin{itemize}
+    \item $\mathcal{P}_k$ is the set of positive stimuli for layer $k$: conversations in
+    which layer $k$ is expected to be active (T2 stimuli for $k = \mathrm{nar}$, T3 stimuli
+    for $k = \mathrm{mor}$).
+    \item $\mathcal{N}_k$ is the set of negative stimuli: T1 baseline conversations, in
+    which no standpoint disruption occurs.
+    \item $\alpha^{(h)}$ is the mean attention weight of head $h$ from the assertion event
+    $x_1$ to the observation event $x_3$.
+\end{itemize}
+\end{definition}
+
+\begin{definition}[Head Assignment]
+\label{def:head-assignment}
+The \textbf{head grouping function} is defined by
+\[
+    \gamma(h) = \argmax_{k \in K}\, \big|\Delta\alpha^{(h)}_k\big|.
+\]
+Each head is assigned to the standpoint layer whose stimuli produce the largest
+attentional response differential. Ties are broken lexicographically.
+\end{definition}
+
+\begin{table}[h]
+\centering
+\caption{Contrastive protocols for head grouping. Each row defines a positive/negative
+stimulus pair used to compute the attention differential $\Delta\alpha^{(h)}_k$
+(Definition~\ref{def:attention-differential}). The differential isolates heads whose
+attention patterns are maximally sensitive to disruption in a specific standpoint layer.}
+\label{tab:contrastive-protocols}
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{Layer $k$} & \textbf{Positive stimuli $\mathcal{P}_k$} & \textbf{Negative stimuli
+$\mathcal{N}_k$} & \textbf{Isolated failure} \\
+\midrule
+$\mathrm{min}$ & T1 with high lexical overlap & T1 with low lexical overlap & Surface
+pattern matching \\
+$\mathrm{nar}$ & T2 (Narrative Fracture) & T1 (Baseline) & Narrative coherence \\
+$\mathrm{soc}$ & Multi-party T1 with role shifts & Single-party T1 & Social context tracking \\
+$\mathrm{mor}$ & T3 (Boundary Breach) & T1 (Baseline) & Moral commitment \\
+$\mathrm{pos}$ & T1 with explicit positional stance & T1 without positional stance & Positional
+identity \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{remark}[Coverage and Redundancy]
+\label{rem:head-coverage}
+With $H = 1024$ heads across 32 layers (32 heads per layer), and 5 standpoint layers, the
+expected number of heads per layer is approximately 205. This provides sufficient redundancy
+for the subspace spanning condition of Definition~\ref{def:head-grouping}: each $W_k$ is
+spanned by $\sim$205 value vectors in $\mathbb{R}^{4096}$, yielding $d_k \approx 205 \times
+128 = 26{,}240$ (assuming per-head value dimension $d_v = 128$). The orthogonality
+assumption (Assumption~\ref{ass:orthogonality}) is verified post hoc by computing the
+pairwise principal angles between subspaces $W_k$ and $W_l$ for $k \neq l$.
+\end{remark}
+
+% ------------------------------------------------------------------------------
+\subsection{Curvature Computation}
+\label{sec:exp-curvature}
+
+We describe the five-step procedure for computing block-specific curvature norms from the
+raw activations extracted in \S\ref{sec:exp-setup}. The procedure implements
+Definition~\ref{def:curvature} and Corollary~\ref{cor:binding-failure} in a form amenable
+to numerical evaluation.
+
+\begin{definition}[Curvature Computation Pipeline]
+\label{def:curvature-pipeline}
+Given a conversation with events $(x_1, x_2, x_3)$ and the head grouping function $\gamma$
+from \S\ref{sec:exp-head-grouping}, the block-specific curvature is computed as follows.
+
+\begin{enumerate}
+    \item \textbf{Extract attention patterns.} For each attention layer $l \in \{1, \ldots,
+    L\}$ and head $h \in \{1, \ldots, H\}$, extract the scalar attention weights
+    $\alpha_{31}^{(l,h)}$ (from $x_1$ to $x_3$, the direct path) and $\alpha_{32}^{(l,h)},
+    \alpha_{21}^{(l,h)}$ (from $x_1$ to $x_2$ and $x_2$ to $x_3$, the indirect path).
+    All weights are aggregated over the final-token-to-all-tokens attention distribution,
+    summed over tokens in the target turn.
+
+    \item \textbf{Compute transport operators.} Using Definition~\ref{def:transport-operator},
+    compute the single-layer transport operators for the direct and indirect paths:
+    \[
+        U_{13}^{(l)} = \sum_{h=1}^{H} \alpha_{31}^{(l,h)}\, V_h^{(l)}\, {V_h^{(l)}}^\top,
+        \qquad
+        U_{12}^{(l)} = \sum_{h=1}^{H} \alpha_{21}^{(l,h)}\, V_h^{(l)}\, {V_h^{(l)}}^\top,
+        \qquad
+        U_{23}^{(l)} = \sum_{h=1}^{H} \alpha_{32}^{(l,h)}\, V_h^{(l)}\, {V_h^{(l)}}^\top.
+    \]
+
+    \item \textbf{Estimate flat transport.} The expected flat transport $U_{13}^{\exp}$ is
+    estimated from the T1 baseline conversations:
+    \[
+        \widehat{U}_{13}^{\exp} = \frac{1}{|\mathcal{T}_1|} \sum_{c \in \mathcal{T}_1}
+        U_{12}^{(l,c)} \cdot U_{23}^{(l,c)},
+    \]
+    where $\mathcal{T}_1$ is the set of 50 baseline (T1) conversations and the superscript
+    $(l,c)$ denotes layer $l$ of conversation $c$. This average transport operator represents
+    the ``expected'' transport when standpoint is preserved through acknowledged revision.
+
+    \item \textbf{Compute curvature.} For each test conversation $c$ (T2 or T3) at layer $l$,
+    compute the curvature tensor (Definition~\ref{def:curvature}):
+    \[
+        F_{123}^{(l,c)} = U_{12}^{(l,c)} \cdot U_{23}^{(l,c)} \cdot
+        \big(\widehat{U}_{13}^{\exp,(l)}\big)^{-1}.
+    \]
+    When the flat-transport estimate is not invertible (which may occur if some heads have
+    near-zero average attention), we regularize by computing the Moore--Penrose pseudoinverse
+    and project onto the invertible subspace.
+
+    \item \textbf{Block-specific norms.} Using the head grouping $\gamma$, project the
+    curvature tensor onto each standpoint subspace (Corollary~\ref{cor:binding-failure}):
+    \[
+        \big\|F_{123}^{(l,c)}\big\|_k = \big\|[F_{123}^{(l,c)}]_k - I_{d_k}\big\|_F,
+        \qquad [F_{123}^{(l,c)}]_k = P_{W_k}\, F_{123}^{(l,c)}\, P_{W_k}.
+    \]
+    The block-specific curvature norm $\|F_{123}^{(l,c)}\|_k$ quantifies the degree of
+    binding failure in standpoint layer $k$ at attention layer $l$ of conversation $c$.
+\end{enumerate}
+\end{definition}
+
+\begin{remark}[Multi-Layer Composition]
+\label{rem:multi-layer-curvature}
+The curvature computation of Definition~\ref{def:curvature-pipeline} is applied
+\emph{per layer} $l$. The effective multi-layer transport
+(Definition~\ref{def:effective-transport}) is computed by composing the per-layer operators:
+\[
+    U_{13}^{\mathrm{eff}} = \prod_{l=1}^{L} \big(I_d + U_{13}^{(l)}\big).
+\]
+The multi-layer curvature $F_{123}^{\mathrm{eff}}$ is then computed analogously. The
+non-abelian structure (Proposition~\ref{prop:cross-term}) manifests as a difference between
+$F_{123}^{\mathrm{eff}}$ and the product of per-layer curvatures: if the layers commuted,
+the effective curvature would equal the sum of per-layer curvatures.
+\end{remark}
+
+% ------------------------------------------------------------------------------
+\subsection{Predictions and Statistical Tests}
+\label{sec:exp-predictions}
+
+We state the formal predictions of the fiber bundle framework and the statistical tests
+used to evaluate them. All tests are conducted at significance level $\alpha = 0.01$.
+
+\begin{hypothesis}[Block-Specificity of Curvature]
+\label{hyp:block-specificity}
+For scenario T2 (Narrative Fracture), the curvature is concentrated in the narrative layer:
+\[
+    \frac{\|F_{123}\|_{\mathrm{nar}}}{\max_{k \in K} \|F_{123}\|_k} > 0.85
+    \qquad \text{for at least 80\% of T2 conversations.}
+\]
+For scenario T3 (Boundary Breach), the curvature is concentrated in the moral layer:
+\[
+    \frac{\|F_{123}\|_{\mathrm{mor}}}{\max_{k \in K} \|F_{123}\|_k} > 0.85
+    \qquad \text{for at least 80\% of T3 conversations.}
+\]
+The threshold $0.85$ ensures that the dominant layer accounts for the overwhelming majority
+of the total curvature signal, ruling out diffuse curvature that would be inconsistent with
+the block structure of Proposition~\ref{prop:block-structure}.
+\end{hypothesis}
+
+\begin{hypothesis}[Baseline Near-Zero Curvature]
+\label{hyp:baseline-zero}
+For scenario T1 (Baseline), the total curvature is near zero across all layers:
+\[
+    \frac{1}{|K|} \sum_{k \in K} \|F_{123}\|_k < \epsilon_{\mathrm{base}}
+    \qquad \text{for at least 90\% of T1 conversations,}
+\]
+where $\epsilon_{\mathrm{base}}$ is the 10th percentile of the T2/T3 curvature
+distribution. This ensures that the curvature signal in disruption scenarios is
+substantially above the noise floor established by the baseline.
+\end{hypothesis}
+
+\begin{hypothesis}[Scenario Discrimination via Kruskal--Wallis Test]
+\label{hyp:kruskal-wallis}
+The three scenario types produce distinguishable curvature profiles. Formally, let
+$\mathbf{f}_c = (\|F_{123}^{(c)}\|_{\mathrm{min}}, \|F_{123}^{(c)}\|_{\mathrm{nar}},
+\|F_{123}^{(c)}\|_{\mathrm{soc}}, \|F_{123}^{(c)}\|_{\mathrm{mor}},
+\|F_{123}^{(c)}\|_{\mathrm{pos}})$ be the curvature vector for conversation $c$. We test
+the null hypothesis that the curvature vectors for the three scenario types are drawn from
+the same distribution using the Kruskal--Wallis $H$-test:
+\[
+    H = \frac{12}{N(N+1)} \sum_{i=1}^{3} \frac{R_i^2}{n_i} - 3(N+1),
+\]
+where $N = 150$, $n_i = 50$, and $R_i$ is the sum of ranks for scenario type $i$. The
+framework predicts $p < 0.01$ for this test, indicating that the scenario types produce
+statistically distinguishable curvature signatures.
+\end{hypothesis}
+
+\begin{hypothesis}[Inter-Layer Coupling]
+\label{hyp:inter-layer-coupling}
+The non-abelian structure (Proposition~\ref{prop:cross-term}) predicts that high curvature
+in one layer induces non-zero off-diagonal curvature coupling. For T2 conversations with
+$\|F_{123}\|_{\mathrm{nar}} > \tau$ (where $\tau$ is the median narrative curvature across
+all T2 conversations), we predict:
+\[
+    \big\|[F_{123}]_{\mathrm{nar},\mathrm{mor}}\big\|_F > 0,
+\]
+where $[F_{123}]_{\mathrm{nar},\mathrm{mor}} = P_{W_{\mathrm{mor}}}\, F_{123}\,
+P_{W_{\mathrm{nar}}}$ is the off-diagonal block coupling the narrative and moral
+subspaces. The significance of this coupling is assessed by comparing against a null
+distribution obtained by permuting the head assignments $\gamma$ (see
+Hypothesis~\ref{hyp:null-non-abelian}).
+\end{hypothesis}
+
+\begin{hypothesis}[Severity Correlation]
+\label{hyp:severity-correlation}
+Across T2 conversations, the magnitude of narrative curvature correlates with the
+\emph{severity} of the pressure event. Severity is operationalized as the semantic
+distance between the user's pressure turn and the model's original assertion, measured by
+cosine similarity of sentence embeddings:
+\[
+    \text{severity}(x_2) = 1 - \cos\!\big(\mathrm{embed}(x_1),\, \mathrm{embed}(x_2)\big).
+\]
+We predict a positive monotonic relationship, tested via Spearman rank correlation:
+\[
+    \rho\big(\text{severity},\, \|F_{123}\|_{\mathrm{nar}}\big) > 0.5
+    \qquad (p < 0.01).
+\]
+An analogous test is conducted for T3 conversations with moral curvature.
+\end{hypothesis}
+
+\begin{hypothesis}[Null-Hypothesis Test for Non-Abelian Structure]
+\label{hyp:null-non-abelian}
+To test whether the observed inter-layer coupling (Hypothesis~\ref{hyp:inter-layer-coupling})
+reflects genuine non-abelian structure rather than statistical artifact, we construct a
+null model by randomly permuting the head assignment function $\gamma$. Specifically, for
+each of $B = 1000$ permutations, we draw $\gamma^{(b)} : \{1, \ldots, H\} \to K$ uniformly
+at random (preserving the number of heads per layer) and recompute the off-diagonal
+curvature coupling. The observed coupling is significant at level $\alpha$ if it exceeds
+the $(1 - \alpha)$ quantile of the null distribution:
+\[
+    \big\|[F_{123}]_{\mathrm{nar},\mathrm{mor}}\big\|_F >
+    Q_{1-\alpha}\!\Big(\Big\{\big\|[F_{123}^{(b)}]_{\mathrm{nar},\mathrm{mor}}\big\|_F
+    \Big\}_{b=1}^{B}\Big).
+\]
+Rejection of this null hypothesis would confirm that the inter-layer coupling arises from
+the \emph{specific} head-to-layer assignment learned by the model, not from generic
+off-diagonal fluctuations. This is the empirical signature of the non-abelian gauge
+structure established in Proposition~\ref{prop:cross-term}.
+\end{hypothesis}
+
+\begin{table}[h]
+\centering
+\caption{Summary of predictions and statistical tests.}
+\label{tab:predictions-summary}
+\begin{tabular}{@{}clll@{}}
+\toprule
+\textbf{ID} & \textbf{Prediction} & \textbf{Test} & \textbf{Threshold} \\
+\midrule
+H\ref{hyp:block-specificity} & Block-specific curvature & Dominant-layer ratio & $> 0.85$
+in $> 80\%$ of conversations \\
+H\ref{hyp:baseline-zero} & Baseline near-zero & Mean curvature norm & $< \epsilon_{\mathrm{base}}$
+in $> 90\%$ of T1 \\
+H\ref{hyp:kruskal-wallis} & Scenario discrimination & Kruskal--Wallis $H$-test & $p < 0.01$ \\
+H\ref{hyp:inter-layer-coupling} & Inter-layer coupling & Off-diagonal norm & $> 0$ (vs.\
+permuted $\gamma$) \\
+H\ref{hyp:severity-correlation} & Severity correlation & Spearman $\rho$ & $\rho > 0.5$,
+$p < 0.01$ \\
+H\ref{hyp:null-non-abelian} & Non-abelian structure & Permutation test & Exceeds $99$th
+percentile of null \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{remark}[Multiple Comparisons]
+\label{rem:multiple-comparisons}
+With six hypothesis tests, we apply Bonferroni correction to maintain a family-wise error
+rate of $\alpha_{\mathrm{FWER}} = 0.01$. Each individual test is conducted at level
+$\alpha / 6 \approx 0.0017$. For the Kruskal--Wallis test (Hypothesis~\ref{hyp:kruskal-wallis}),
+post-hoc pairwise comparisons between scenario types are conducted using Dunn's test with
+Holm--Bonferroni correction.
+\end{remark}
+
+\begin{remark}[Effect Sizes and Practical Significance]
+\label{rem:effect-sizes}
+Beyond statistical significance, we report effect sizes for all tests. For
+Hypothesis~\ref{hyp:kruskal-wallis}, we report the epsilon-squared effect size
+$\hat{\varepsilon}^2 = (H - k + 1) / (N - k)$, where $k = 3$ is the number of groups.
+For Hypothesis~\ref{hyp:severity-correlation}, the Spearman $\rho$ itself serves as the
+effect size. For block-specificity (Hypothesis~\ref{hyp:block-specificity}), we report
+the mean dominant-layer ratio across conversations. These quantities enable readers to
+assess the \emph{practical} significance of the curvature framework independent of sample
+size.
+\end{remark}
+
+\begin{remark}[Reproducibility]
+\label{rem:reproducibility}
+All experimental stimuli, extraction code, and analysis scripts will be released upon
+publication. The curvature computation pipeline (Definition~\ref{def:curvature-pipeline})
+is implemented using TransformerLens~\cite{nanda2023transformerlens} for activation
+extraction and NumPy/PyTorch for linear algebra operations. The head grouping function
+$\gamma$ is estimated once on the full stimulus set and then fixed for all downstream
+analyses, avoiding circularity.
+\end{remark}

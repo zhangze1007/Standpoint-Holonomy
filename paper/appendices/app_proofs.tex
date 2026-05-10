@@ -1,0 +1,591 @@
+% ==============================================================================
+% Appendix: Formal Proofs
+% "Endogenous Standpoint as a Low-Curvature Attractor"
+% ==============================================================================
+
+\section*{Appendix A: Formal Proofs}
+\label{app:proofs}
+
+This appendix provides complete, self-contained proofs for the key propositions and
+theorems stated in Section~\ref{sec:instantiation}. Each proof is presented in full
+detail to facilitate verification and to establish the logical foundations on which the
+main results rest. We recall the standing notation: $d$ is the residual stream dimension,
+$K = \{\mathrm{min}, \mathrm{nar}, \mathrm{soc}, \mathrm{mor}, \mathrm{pos}\}$ is the set
+of standpoint layers, $d_k = \dim(W_k)$ for each $k \in K$ with $\sum_k d_k = d$, and
+$P_{W_k}$ denotes the orthogonal projector onto the subspace $W_k$. All transport
+operators $U_{ij}$ are assumed to satisfy the block-diagonal structure of
+Proposition~\ref{prop:block-structure}.
+
+% ==============================================================================
+\subsection{Proof of Proposition: Metric Preservation of Attention Transport}
+\label{app:proof-metric-preservation}
+
+\begin{proposition}[Metric Preservation of Attention Transport]
+\label{prop:metric-preservation-app}
+Under Assumption~\ref{ass:orthogonality} and $\mathbf{V}_h^\top \mathbf{V}_h =
+\mathbf{I}_{d_v}$ for all $h$, the transport operator $\mathbf{U}_{ij} = \sum_h
+\alpha_{ji}^{(h)} \mathbf{V}_h \mathbf{V}_h^\top$ satisfies:
+\[
+    \mathbf{U}_{ij}^\top \mathbf{g}_F \mathbf{U}_{ij} = \mathbf{g}_F
+\]
+when $\alpha_{ji}^{(k)} = 1$ for all $k$ (normalized attention).
+\end{proposition}
+
+\begin{proof}
+We proceed in three steps: first we decompose $U_{ij}$ into block form, then we
+evaluate the quadratic form $U_{ij}^\top g_F U_{ij}$ block-by-block, and finally
+we specialize to the case where all attention weights are unity.
+
+\medskip\noindent\textbf{Step 1: Block decomposition of $U_{ij}$.}
+By Proposition~\ref{prop:block-structure}, the transport operator admits the
+decomposition
+\[
+    U_{ij} = \sum_{k \in K} \bar{\alpha}_{ji}^{(k)}\, P_{W_k},
+\]
+where $\bar{\alpha}_{ji}^{(k)} = \frac{1}{|H_k|} \sum_{h \in H_k} \alpha_{ji}^{(h)}$ is
+the mean attention weight of layer $k$'s heads from $x_i$ to $x_j$, and $P_{W_k}$ is the
+orthogonal projector onto $W_k$. This decomposition follows from the orthonormality of the
+value matrices: for each head $h \in H_k$, the matrix $V_h V_h^\top$ is the orthogonal
+projector onto $\operatorname{range}(V_h)$ (since $V_h^\top V_h = I_{d_v}$ implies $V_h
+V_h^\top$ is idempotent and symmetric), and $\sum_{h \in H_k} V_h V_h^\top = P_{W_k}$
+because the ranges of $\{V_h\}_{h \in H_k}$ form an orthonormal basis for $W_k$.
+
+\medskip\noindent\textbf{Step 2: Evaluation of $U_{ij}^\top g_F U_{ij}$.}
+Since $U_{ij}$ is a linear combination of orthogonal projectors onto mutually orthogonal
+subspaces, it is symmetric:
+\[
+    U_{ij}^\top = \Big(\sum_{k \in K} \bar{\alpha}_{ji}^{(k)}\, P_{W_k}\Big)^\top
+               = \sum_{k \in K} \bar{\alpha}_{ji}^{(k)}\, P_{W_k}^\top
+               = \sum_{k \in K} \bar{\alpha}_{ji}^{(k)}\, P_{W_k} = U_{ij}.
+\]
+The fiber metric (Definition~\ref{def:fiber-metric}) is
+\[
+    g_F = \bigoplus_{k \in K} \alpha_k\, I_{d_k} = \sum_{k \in K} \alpha_k\, P_{W_k},
+\]
+where the $\alpha_k > 0$ are the layer weights. Now compute:
+\begin{align*}
+    U_{ij}^\top\, g_F\, U_{ij}
+    &= U_{ij}\, g_F\, U_{ij}
+      && \text{(since } U_{ij} = U_{ij}^\top \text{)} \\[4pt]
+    &= \Big(\sum_{k \in K} \bar{\alpha}_{ji}^{(k)}\, P_{W_k}\Big)\,
+       \Big(\sum_{l \in K} \alpha_l\, P_{W_l}\Big)\,
+       \Big(\sum_{m \in K} \bar{\alpha}_{ji}^{(m)}\, P_{W_m}\Big) \\[4pt]
+    &= \sum_{k,l,m \in K} \bar{\alpha}_{ji}^{(k)}\, \alpha_l\,
+       \bar{\alpha}_{ji}^{(m)}\, P_{W_k}\, P_{W_l}\, P_{W_m}.
+\end{align*}
+By the orthogonality of the subspaces (Assumption~\ref{ass:orthogonality}),
+$P_{W_k} P_{W_l} = \delta_{kl}\, P_{W_k}$. Therefore:
+\[
+    P_{W_k}\, P_{W_l}\, P_{W_m} = \delta_{kl}\, \delta_{lm}\, P_{W_k} = \delta_{klm}\,
+    P_{W_k},
+\]
+where $\delta_{klm} = 1$ if $k = l = m$ and $0$ otherwise. The triple sum collapses:
+\begin{equation}
+\label{eq:metric-quadratic}
+    U_{ij}^\top\, g_F\, U_{ij}
+    = \sum_{k \in K} \big(\bar{\alpha}_{ji}^{(k)}\big)^2\, \alpha_k\, P_{W_k}.
+\end{equation}
+
+\medskip\noindent\textbf{Step 3: Specialization to $\alpha_{ji}^{(k)} = 1$ for all $k$.}
+When $\alpha_{ji}^{(h)} = 1$ for every head $h$, we have $\bar{\alpha}_{ji}^{(k)} = 1$ for
+all $k \in K$. Moreover, when $\alpha_k = 1$ for all $k$ (the standard Euclidean fiber
+metric, as stated in the convention following Definition~\ref{def:fiber-metric}),
+equation~\eqref{eq:metric-quadratic} becomes:
+\[
+    U_{ij}^\top\, g_F\, U_{ij}
+    = \sum_{k \in K} 1^2 \cdot 1 \cdot P_{W_k}
+    = \sum_{k \in K} P_{W_k}
+    = I_d.
+\]
+The last equality holds because $\{W_k\}_{k \in K}$ is an orthogonal decomposition of
+$\mathbb{R}^d$ (Proposition~\ref{prop:fiber-decomposition}), so $\sum_k P_{W_k} = I_d$.
+Since $g_F = \sum_k P_{W_k} = I_d$ under the standard metric, we conclude
+\[
+    U_{ij}^\top\, g_F\, U_{ij} = I_d = g_F,
+\]
+which establishes that $U_{ij}$ is an isometry of the fiber metric under normalized
+attention.
+
+\medskip\noindent\textbf{Remark.} In the general case where $\alpha_k$ are not all equal
+to $1$, equation~\eqref{eq:metric-quadratic} shows that $U_{ij}^\top g_F U_{ij} =
+\sum_k (\bar{\alpha}_{ji}^{(k)})^2 \alpha_k P_{W_k}$, which equals $g_F = \sum_k
+\alpha_k P_{W_k}$ if and only if $(\bar{\alpha}_{ji}^{(k)})^2 = 1$ for all $k$. Since
+attention weights are non-negative, this requires $\bar{\alpha}_{ji}^{(k)} = 1$ for all
+$k$, which is the normalized attention condition stated in the proposition.
+\end{proof}
+
+% ==============================================================================
+\subsection{Proof of Theorem: Curvature as Path-Dependence}
+\label{app:proof-path-dependence}
+
+For completeness, we reproduce the proof of Theorem~\ref{thm:path-dependence} with
+additional detail on the algebraic manipulations and the geometric interpretation of each
+direction.
+
+\begin{theorem}[Curvature as Path-Dependence, restated from Theorem~\ref{thm:path-dependence}]
+\label{thm:path-dependence-app}
+$F_{ijk} = I_d$ if and only if the transport from $x_i$ to $x_k$ is the same whether or
+not the intermediate event $x_j$ intervenes:
+\[
+    F_{ijk} = I_d \quad\Longleftrightarrow\quad U_{ij} \cdot U_{jk} = U_{ik}^{\exp}.
+\]
+\end{theorem}
+
+\begin{proof}
+The curvature tensor (Definition~\ref{def:curvature}) is defined by
+\[
+    F_{ijk} = U_{ij} \cdot U_{jk} \cdot \big(U_{ik}^{\exp}\big)^{-1}.
+\]
+We note that $U_{ik}^{\exp} \in \operatorname{GL}(d, \mathbb{R})$ is invertible by
+definition: it is the expected transport operator, estimated from baseline conversations
+in which standpoint coherence is preserved. The block-diagonal structure
+(Proposition~\ref{prop:block-structure}) ensures that $U_{ik}^{\exp} = \bigoplus_k
+\bar{\alpha}^{(k)}_{\exp}\, I_{d_k}$ with each $\bar{\alpha}^{(k)}_{\exp} > 0$, so
+invertibility is guaranteed.
+
+\medskip\noindent\textbf{Forward direction ($\Rightarrow$):} Suppose $F_{ijk} = I_d$.
+By Definition~\ref{def:curvature}:
+\[
+    U_{ij} \cdot U_{jk} \cdot \big(U_{ik}^{\exp}\big)^{-1} = I_d.
+\]
+Since $U_{ik}^{\exp}$ is invertible, we may right-multiply both sides by
+$U_{ik}^{\exp}$:
+\[
+    U_{ij} \cdot U_{jk} \cdot \big(U_{ik}^{\exp}\big)^{-1} \cdot U_{ik}^{\exp}
+    = I_d \cdot U_{ik}^{\exp},
+\]
+which simplifies to
+\[
+    U_{ij} \cdot U_{jk} = U_{ik}^{\exp}.
+\]
+This establishes that the composite transport through the intermediate event $x_j$ equals
+the expected direct transport from $x_i$ to $x_k$. Geometrically, the parallel transport
+along the path $x_i \to x_j \to x_k$ yields the same result as the expected flat
+transport along $x_i \to x_k$: the intermediate event $x_j$ did not alter the standpoint,
+and the transport is path-independent.
+
+\medskip\noindent\textbf{Reverse direction ($\Leftarrow$):} Suppose $U_{ij} \cdot U_{jk} =
+U_{ik}^{\exp}$. Substituting into the definition of curvature:
+\begin{align*}
+    F_{ijk}
+    &= U_{ij} \cdot U_{jk} \cdot \big(U_{ik}^{\exp}\big)^{-1} \\
+    &= U_{ik}^{\exp} \cdot \big(U_{ik}^{\exp}\big)^{-1}
+      && \text{(by hypothesis)} \\
+    &= I_d.
+\end{align*}
+Hence the curvature is trivial: the standpoint was transported consistently, with no
+path-dependence introduced by the event $x_j$.
+
+\medskip\noindent\textbf{Algebraic summary.} The two directions establish the logical
+equivalence
+\[
+    F_{ijk} = I_d
+    \quad\Longleftrightarrow\quad
+    U_{ij} \cdot U_{jk} = U_{ik}^{\exp},
+\]
+which we may restate as: the holonomy around the triangle $\langle x_i, x_j, x_k
+\rangle$ is trivial if and only if the composite transport through $x_j$ coincides with
+the expected flat transport.
+\end{proof}
+
+% ==============================================================================
+\subsection{Proof of Proposition: Gauge Invariance of Block-Specific Curvature}
+\label{app:proof-gauge-invariance}
+
+We provide a self-contained proof of Proposition~\ref{prop:gauge-invariance} with full
+detail on the use of Frobenius norm invariance under orthogonal conjugation.
+
+\begin{proposition}[Gauge Invariance of Block-Specific Curvature, restated from
+Proposition~\ref{prop:gauge-invariance}]
+\label{prop:gauge-invariance-app}
+Under the gauge transformation $U_{ij} \mapsto g_j\, U_{ij}\, g_i^{-1}$ with $g_i, g_j
+\in G = \prod_{k \in K} O(d_k)$, the block-specific curvature norms are invariant:
+\[
+    \big\|g_i\, [F_{ijk}]_k\, g_i^{-1} - I_{d_k}\big\|_F
+    = \big\|[F_{ijk}]_k - I_{d_k}\big\|_F
+    \qquad \forall\, k \in K.
+\]
+\end{proposition}
+
+\begin{proof}
+We first establish the block structure of the gauge-transformed curvature, then prove
+the norm invariance using the unitary invariance of the Frobenius norm.
+
+\medskip\noindent\textbf{Step 1: Block structure of the gauge-transformed curvature.}
+Under a gauge transformation, each transport operator transforms as $U_{ij} \mapsto g_j\,
+U_{ij}\, g_i^{-1}$. The composite transport transforms as:
+\begin{align*}
+    U_{ij} \cdot U_{jk}
+    &\;\longmapsto\; (g_j\, U_{ij}\, g_i^{-1}) \cdot (g_k\, U_{jk}\, g_j^{-1})
+    = g_k\, (U_{ij} \cdot U_{jk})\, g_i^{-1}.
+\end{align*}
+The expected flat transport transforms in the same way:
+\[
+    U_{ik}^{\exp} \;\longmapsto\; g_k\, U_{ik}^{\exp}\, g_i^{-1}.
+\]
+Therefore the curvature transforms by conjugation:
+\begin{align*}
+    F_{ijk}
+    &\;\longmapsto\; g_k\, (U_{ij} \cdot U_{jk})\, g_i^{-1}
+       \cdot \big(g_k\, U_{ik}^{\exp}\, g_i^{-1}\big)^{-1} \\
+    &= g_k\, (U_{ij} \cdot U_{jk})\, g_i^{-1}
+       \cdot g_i\, (U_{ik}^{\exp})^{-1}\, g_k^{-1} \\
+    &= g_k\, (U_{ij} \cdot U_{jk})\, (U_{ik}^{\exp})^{-1}\, g_k^{-1} \\
+    &= g_k\, F_{ijk}\, g_k^{-1}.
+\end{align*}
+
+\medskip\noindent\textbf{Step 2: Block-level conjugation.}
+Since $g_k \in G = \prod_{l \in K} O(d_l)$, we write $g_k = (g_k^{(\mathrm{min})}, \ldots,
+g_k^{(\mathrm{pos})})$ with each $g_k^{(l)} \in O(d_l)$. The element $g_k$ acts on
+$\mathbb{R}^d$ as the block-diagonal matrix
+\[
+    g_k = \bigoplus_{l \in K} g_k^{(l)} = \operatorname{diag}\!\big(g_k^{(\mathrm{min})},\,
+    g_k^{(\mathrm{nar})},\, \ldots,\, g_k^{(\mathrm{pos})}\big).
+\]
+Under the block-diagonal structure of $F_{ijk}$ (which follows from the block-diagonal
+structure of each $U_{ij}$ by Proposition~\ref{prop:block-structure}, since the product
+and inverse of block-diagonal matrices are block-diagonal), the conjugation $g_k\,
+F_{ijk}\, g_k^{-1}$ acts blockwise:
+\[
+    [g_k\, F_{ijk}\, g_k^{-1}]_l = g_k^{(l)}\, [F_{ijk}]_l\, \big(g_k^{(l)}\big)^{-1}
+    \qquad \forall\, l \in K.
+\]
+
+\medskip\noindent\textbf{Step 3: Frobenius norm invariance under orthogonal conjugation.}
+We now prove the key algebraic identity: for any $Q \in O(n)$ (an $n \times n$ orthogonal
+matrix) and any $A \in \operatorname{Mat}(n, \mathbb{R})$,
+\begin{equation}
+\label{eq:frob-invariance}
+    \|Q A Q^\top\|_F = \|A\|_F.
+\end{equation}
+To establish this, recall that the Frobenius norm satisfies $\|M\|_F^2 =
+\operatorname{tr}(M^\top M)$ for any matrix $M$. Therefore:
+\begin{align*}
+    \|Q A Q^\top\|_F^2
+    &= \operatorname{tr}\!\big((Q A Q^\top)^\top\, (Q A Q^\top)\big) \\
+    &= \operatorname{tr}\!\big(Q A^\top Q^\top\, Q A Q^\top\big)
+      && \text{(transpose of a product)} \\
+    &= \operatorname{tr}\!\big(Q A^\top\, (Q^\top Q)\, A Q^\top\big) \\
+    &= \operatorname{tr}\!\big(Q A^\top A Q^\top\big)
+      && \text{(since } Q^\top Q = I_n \text{)} \\
+    &= \operatorname{tr}\!\big(A^\top A\, Q^\top Q\big)
+      && \text{(cyclic property of trace: } \operatorname{tr}(XY) = \operatorname{tr}(YX)\text{)} \\
+    &= \operatorname{tr}\!\big(A^\top A\big)
+      && \text{(since } Q^\top Q = I_n \text{)} \\
+    &= \|A\|_F^2.
+\end{align*}
+Taking square roots (both sides are non-negative) yields identity~\eqref{eq:frob-invariance}.
+
+\medskip\noindent\textbf{Step 4: Application to the block-specific curvature norm.}
+For each layer $l \in K$, the gauge-transformed block-specific curvature is
+\[
+    [F_{ijk}^{\,\mathrm{gauge}}]_l = g_k^{(l)}\, [F_{ijk}]_l\, \big(g_k^{(l)}\big)^{-1}.
+\]
+Since $g_k^{(l)} \in O(d_l)$, we have $(g_k^{(l)})^{-1} = (g_k^{(l)})^\top$, so this is
+an orthogonal conjugation. The block-specific curvature norm is:
+\begin{align*}
+    \big\|[F_{ijk}^{\,\mathrm{gauge}}]_l - I_{d_l}\big\|_F
+    &= \big\|g_k^{(l)}\, [F_{ijk}]_l\, (g_k^{(l)})^{-1} - I_{d_l}\big\|_F.
+\end{align*}
+Now observe that $g_k^{(l)}\, I_{d_l}\, (g_k^{(l)})^{-1} = I_{d_l}$, since the identity
+matrix commutes with every invertible matrix. Therefore:
+\begin{align*}
+    g_k^{(l)}\, [F_{ijk}]_l\, (g_k^{(l)})^{-1} - I_{d_l}
+    &= g_k^{(l)}\, [F_{ijk}]_l\, (g_k^{(l)})^{-1}
+       - g_k^{(l)}\, I_{d_l}\, (g_k^{(l)})^{-1} \\
+    &= g_k^{(l)}\, \big([F_{ijk}]_l - I_{d_l}\big)\, (g_k^{(l)})^{-1}.
+\end{align*}
+Applying identity~\eqref{eq:frob-invariance} with $Q = g_k^{(l)}$ and $A = [F_{ijk}]_l -
+I_{d_l}$:
+\begin{align*}
+    \big\|[F_{ijk}^{\,\mathrm{gauge}}]_l - I_{d_l}\big\|_F
+    &= \big\|g_k^{(l)}\, \big([F_{ijk}]_l - I_{d_l}\big)\,
+       (g_k^{(l)})^{-1}\big\|_F \\
+    &= \big\|[F_{ijk}]_l - I_{d_l}\big\|_F.
+\end{align*}
+This holds for all $l \in K$, establishing the full gauge invariance of the
+block-specific curvature norms.
+
+\medskip\noindent\textbf{Remark on physical interpretation.} The gauge invariance proved
+here ensures that the diagnostic framework of Corollary~\ref{cor:binding-failure}---which
+classifies standpoint failures by examining which $\|F_{ijk}\|_k$ is large---is
+well-defined independently of the choice of orthonormal basis within each standpoint
+subspace $W_k$. A different gauge choice (a different basis for $W_k$, implemented by an
+element of $O(d_k)$) yields the same curvature norms. The diagnosis is a property of the
+underlying geometric structure, not an artifact of the representation.
+\end{proof}
+
+% ==============================================================================
+\subsection{Proof of Proposition: Block Decomposition of Total Curvature}
+\label{app:proof-block-decomposition}
+
+\begin{proposition}[Block Decomposition of Total Curvature, restated from
+Proposition~\ref{prop:curvature-block-decomposition}]
+\label{prop:curvature-block-decomposition-app}
+The total curvature norm decomposes as
+\[
+    \|F_{ijk} - I_d\|_F^2 = \sum_{k \in K} \big\|[F_{ijk}]_k - I_{d_k}\big\|_F^2
+    + \sum_{\substack{k,l \in K \\ k \neq l}} \big\|P_{W_k}\, F_{ijk}\, P_{W_l}\big\|_F^2.
+\]
+\end{proposition}
+
+\begin{proof}
+We use the orthogonal decomposition $\mathbb{R}^d = \bigoplus_{k \in K} W_k$ to express
+any $d \times d$ matrix as a sum of blocks indexed by pairs $(k, l) \in K \times K$, and
+then apply the Pythagorean theorem for the Frobenius inner product.
+
+\medskip\noindent\textbf{Step 1: Block decomposition of a matrix.}
+For any matrix $M \in \operatorname{Mat}(d, \mathbb{R})$ and the orthogonal decomposition
+$\mathbb{R}^d = \bigoplus_k W_k$ with projectors $\{P_{W_k}\}_{k \in K}$ satisfying
+$P_{W_k} P_{W_l} = \delta_{kl}\, P_{W_k}$ and $\sum_k P_{W_k} = I_d$, we can write
+\[
+    M = I_d\, M\, I_d = \Big(\sum_{k \in K} P_{W_k}\Big)\, M\,
+    \Big(\sum_{l \in K} P_{W_l}\Big) = \sum_{k, l \in K} P_{W_k}\, M\, P_{W_l}.
+\]
+Define the $(k, l)$-block of $M$:
+\[
+    [M]_{kl} = P_{W_k}\, M\, P_{W_l} \in \operatorname{Hom}(W_l, W_k).
+\]
+Note that $[M]_{kl}$ maps $W_l$ into $W_k$, and $[M]_{kl} = 0$ when restricted to
+$W_l^\perp$.
+
+\medskip\noindent\textbf{Step 2: Orthogonality of blocks in the Frobenius inner product.}
+We claim that the blocks $\{[M]_{kl}\}$ are mutually orthogonal in the Frobenius inner
+product $\langle A, B \rangle_F = \operatorname{tr}(A^\top B)$. That is, for $(k, l) \neq
+(k', l')$:
+\[
+    \langle [M]_{kl},\, [M]_{k'l'}\rangle_F = 0.
+\]
+To verify this:
+\begin{align*}
+    \langle [M]_{kl},\, [M]_{k'l'}\rangle_F
+    &= \operatorname{tr}\!\big([M]_{kl}^\top\, [M]_{k'l'}\big) \\
+    &= \operatorname{tr}\!\big((P_{W_k}\, M\, P_{W_l})^\top\, P_{W_{k'}}\, M\,
+       P_{W_{l'}}\big) \\
+    &= \operatorname{tr}\!\big(P_{W_l}\, M^\top\, P_{W_k}\, P_{W_{k'}}\, M\,
+       P_{W_{l'}}\big)
+       && \text{(since } P_{W_k}^\top = P_{W_k}\text{)} \\
+    &= \operatorname{tr}\!\big(P_{W_l}\, M^\top\, \delta_{kk'}\, P_{W_k}\, M\,
+       P_{W_{l'}}\big)
+       && \text{(since } P_{W_k} P_{W_{k'}} = \delta_{kk'}\, P_{W_k}\text{)} \\
+    &= \delta_{kk'}\, \operatorname{tr}\!\big(P_{W_l}\, M^\top\, P_{W_k}\, M\,
+       P_{W_{l'}}\big).
+\end{align*}
+By the cyclic property of trace:
+\begin{align*}
+    \operatorname{tr}\!\big(P_{W_l}\, M^\top\, P_{W_k}\, M\, P_{W_{l'}}\big)
+    &= \operatorname{tr}\!\big(M^\top\, P_{W_k}\, M\, P_{W_{l'}}\, P_{W_l}\big) \\
+    &= \delta_{l'l}\, \operatorname{tr}\!\big(M^\top\, P_{W_k}\, M\, P_{W_l}\big),
+    && \text{(since } P_{W_{l'}} P_{W_l} = \delta_{l'l}\, P_{W_l}\text{)}
+\end{align*}
+Therefore:
+\[
+    \langle [M]_{kl},\, [M]_{k'l'}\rangle_F = \delta_{kk'}\, \delta_{ll'}\,
+    \operatorname{tr}\!\big(M^\top\, P_{W_k}\, M\, P_{W_l}\big),
+\]
+which is zero whenever $(k, l) \neq (k', l')$.
+
+\medskip\noindent\textbf{Step 3: Pythagorean decomposition of the Frobenius norm.}
+By the orthogonality of blocks established in Step 2, the Frobenius norm squared of $M$ is
+the sum of the Frobenius norms squared of its blocks:
+\begin{equation}
+\label{eq:pythagorean}
+    \|M\|_F^2 = \sum_{k, l \in K} \|[M]_{kl}\|_F^2.
+\end{equation}
+To verify directly:
+\begin{align*}
+    \|M\|_F^2
+    &= \operatorname{tr}(M^\top M) \\
+    &= \operatorname{tr}\!\bigg(\Big(\sum_{k,l} P_{W_l}\, M^\top\, P_{W_k}\Big)\,
+       \Big(\sum_{k',l'} P_{W_{k'}}\, M\, P_{W_{l'}}\Big)\bigg) \\
+    &= \sum_{k,l,k',l'} \operatorname{tr}\!\big(P_{W_l}\, M^\top\, P_{W_k}\,
+       P_{W_{k'}}\, M\, P_{W_{l'}}\big) \\
+    &= \sum_{k,l,k',l'} \delta_{kk'}\, \operatorname{tr}\!\big(P_{W_l}\, M^\top\,
+       P_{W_k}\, M\, P_{W_{l'}}\big) \\
+    &= \sum_{k,l,l'} \delta_{ll'}\, \operatorname{tr}\!\big(M^\top\, P_{W_k}\, M\,
+       P_{W_l}\big)
+       && \text{(cyclic trace and } P_{W_{l'}} P_{W_l} = \delta_{l'l} P_{W_l}\text{)} \\
+    &= \sum_{k,l} \operatorname{tr}\!\big(M^\top\, P_{W_k}\, M\, P_{W_l}\big) \\
+    &= \sum_{k,l} \operatorname{tr}\!\big((P_{W_k}\, M\, P_{W_l})^\top\,
+       (P_{W_k}\, M\, P_{W_l})\big) \\
+    &= \sum_{k,l} \|[M]_{kl}\|_F^2.
+\end{align*}
+
+\medskip\noindent\textbf{Step 4: Application to $F_{ijk} - I_d$.}
+Set $M = F_{ijk} - I_d$. The blocks of $M$ are:
+\[
+    [M]_{kl} = P_{W_k}\, (F_{ijk} - I_d)\, P_{W_l}
+    = P_{W_k}\, F_{ijk}\, P_{W_l} - P_{W_k}\, I_d\, P_{W_l}.
+\]
+For the identity term, $P_{W_k}\, I_d\, P_{W_l} = P_{W_k}\, P_{W_l} = \delta_{kl}\,
+P_{W_k}$. Therefore:
+\[
+    [M]_{kl} =
+    \begin{cases}
+        P_{W_k}\, F_{ijk}\, P_{W_k} - P_{W_k} = [F_{ijk}]_k - I_{d_k}
+        & \text{if } k = l, \\[4pt]
+        P_{W_k}\, F_{ijk}\, P_{W_l}
+        & \text{if } k \neq l,
+    \end{cases}
+\]
+where we identify $[F_{ijk}]_k = P_{W_k}\, F_{ijk}\, P_{W_k}$ as the $k$-th diagonal
+block of $F_{ijk}$, and $P_{W_k} = I_{d_k}$ (as an operator on $W_k$).
+
+Applying the Pythagorean decomposition~\eqref{eq:pythagorean}:
+\begin{align*}
+    \|F_{ijk} - I_d\|_F^2
+    &= \sum_{k, l \in K} \|[M]_{kl}\|_F^2 \\
+    &= \sum_{k \in K} \|[M]_{kk}\|_F^2 + \sum_{\substack{k, l \in K \\ k \neq l}}
+       \|[M]_{kl}\|_F^2 \\
+    &= \sum_{k \in K} \big\|[F_{ijk}]_k - I_{d_k}\big\|_F^2
+    + \sum_{\substack{k, l \in K \\ k \neq l}} \big\|P_{W_k}\, F_{ijk}\, P_{W_l}\big\|_F^2.
+\end{align*}
+This is the stated identity.
+
+\medskip\noindent\textbf{Interpretation.} The first sum captures the \emph{diagonal}
+(block-specific) curvature: the failure of each standpoint layer's transport to be
+trivial. The second sum captures the \emph{off-diagonal} (cross-layer) curvature: the
+leakage of transport between distinct standpoint layers. Under
+Assumption~\ref{ass:orthogonality} and the block-diagonal structure of $U_{ij}$
+(Proposition~\ref{prop:block-structure}), the cross-layer terms vanish at the single-layer
+level. However, as shown in Proposition~\ref{prop:cross-term}, multi-layer composition can
+introduce non-zero off-diagonal curvature, reflecting the non-abelian coupling between
+standpoint layers.
+\end{proof}
+
+% ==============================================================================
+\subsection{Proof of Theorem: Curvature as Binding Failure --- Formal Equivalence}
+\label{app:proof-binding-failure}
+
+We now prove the central theorem connecting the geometric curvature of the fiber bundle to
+the binding failure concept of the commitment architecture~\cite{self-jurisdiction}. This
+theorem establishes that the two frameworks---differential geometry and commitment
+logic---are formally equivalent descriptions of the same phenomenon.
+
+\begin{theorem}[Curvature as Binding Failure: Formal Equivalence, restated from
+Theorem~\ref{thm:curvature-binding}]
+\label{thm:curvature-binding-app}
+Let $\Psi_{x_i}$ be the standpoint state at event $x_i$, and let $U_{ij} \cdot U_{jk}$ be
+the composite transport through event $x_j$ to event $x_k$. Then for each layer $k \in K$:
+\[
+    \|F_{ijk}\|_k > 0 \quad\Longleftrightarrow\quad \text{the commitment encoded in
+    layer $k$ was not preserved through event $x_j$.}
+\]
+\end{theorem}
+
+\begin{proof}
+The proof has three parts. First, we establish the formal correspondence between the
+commitment architecture and the geometric framework. Second, we prove the forward direction
+(positive curvature implies binding failure). Third, we prove the reverse direction (binding
+failure implies positive curvature).
+
+\medskip\noindent\textbf{Part 1: Formal correspondence.}
+We recall the correspondence between the commitment architecture of~\cite{self-jurisdiction}
+and the geometric framework (Table~\ref{tab:correspondence}):
+\begin{enumerate}
+    \item The self-jurisdiction state $M_t$ corresponds to the standpoint state $\Psi_{x_t}
+    = (\psi_k(x_t))_{k \in K}$.
+    \item The binding operation $\mathrm{Bind}(c_t, a_t, S_t, \ell_t)$ corresponds to
+    parallel transport $U_{ij}$.
+    \item The commitment in layer $k$ at event $x_i$ is encoded in $\psi_k(x_i) =
+    P_{W_k}\, h_{x_i}$, the projection of the residual stream onto $W_k$.
+    \item The commitment is \emph{preserved} through event $x_j$ if and only if the
+    standpoint component $\psi_k$ at event $x_k$ equals its expected value
+    $\psi_k^{\exp}(x_k)$, i.e., the value it would have had under flat (standpoint-preserving)
+    transport.
+\end{enumerate}
+
+\medskip\noindent\textbf{Part 2: Forward direction ($\Rightarrow$).}
+Suppose $\|F_{ijk}\|_k > 0$. By definition of the block-specific curvature norm
+(Corollary~\ref{cor:binding-failure}):
+\[
+    \|F_{ijk}\|_k = \big\|[F_{ijk}]_k - I_{d_k}\big\|_F > 0,
+\]
+which implies $[F_{ijk}]_k \neq I_{d_k}$.
+
+Since $U_{ij}$ and $U_{jk}$ are block-diagonal (Proposition~\ref{prop:block-structure}),
+their product $U_{ij} \cdot U_{jk}$ is also block-diagonal, with $k$-th block
+\[
+    [U_{ij} \cdot U_{jk}]_k = \bar{\alpha}_{ji}^{(k)}\, \bar{\alpha}_{kj}^{(k)}\,
+    I_{d_k}.
+\]
+Similarly, the expected transport has $k$-th block $[U_{ik}^{\exp}]_k =
+\bar{\alpha}^{(k)}_{\exp}\, I_{d_k}$. The $k$-th block of the curvature is:
+\[
+    [F_{ijk}]_k = [U_{ij} \cdot U_{jk}]_k \cdot ([U_{ik}^{\exp}]_k)^{-1}
+    = \frac{\bar{\alpha}_{ji}^{(k)}\, \bar{\alpha}_{kj}^{(k)}}
+           {\bar{\alpha}^{(k)}_{\exp}}\, I_{d_k}.
+\]
+The condition $[F_{ijk}]_k \neq I_{d_k}$ is equivalent to
+\[
+    \bar{\alpha}_{ji}^{(k)}\, \bar{\alpha}_{kj}^{(k)} \neq \bar{\alpha}^{(k)}_{\exp}.
+\]
+This means the composite attention weight for layer $k$ through event $x_j$ differs from
+the expected value. In the commitment architecture language, the standpoint component
+$\psi_k$ was transported to a different value than expected:
+\[
+    \psi_k(x_k) = [U_{ij} \cdot U_{jk}]_k\, \psi_k(x_i)
+    \neq [U_{ik}^{\exp}]_k\, \psi_k(x_i) = \psi_k^{\exp}(x_k).
+\]
+The event $x_j$ (a pressure turn, such as a challenge or suggestion to revise) induced a
+change in $\psi_k$ that was not present in the expected (baseline) transport. By the
+correspondence $U_{ij} \leftrightarrow \mathrm{Bind}$ (Table~\ref{tab:correspondence}),
+this discrepancy constitutes a binding failure: the commitment encoded in layer $k$ at
+event $x_i$ was not preserved through the intervening event $x_j$.
+
+\medskip\noindent\textbf{Part 3: Reverse direction ($\Leftarrow$).}
+Suppose the commitment encoded in layer $k$ was not preserved through event $x_j$. By the
+formal definition of binding failure in the commitment architecture, this means that the
+self-jurisdiction state at event $x_k$ does not cohere with the committed state from
+$x_i$, when mediated by the pressure event $x_j$.
+
+Translating to the geometric framework via the correspondence of Part~1: the standpoint
+component $\psi_k(x_k)$ differs from its expected value $\psi_k^{\exp}(x_k)$. That is:
+\[
+    \psi_k(x_k) \neq \psi_k^{\exp}(x_k).
+\]
+Since $\psi_k(x_k) = [U_{ij} \cdot U_{jk}]_k\, \psi_k(x_i)$ and $\psi_k^{\exp}(x_k) =
+[U_{ik}^{\exp}]_k\, \psi_k(x_i)$, this implies
+\[
+    [U_{ij} \cdot U_{jk}]_k\, \psi_k(x_i) \neq [U_{ik}^{\exp}]_k\, \psi_k(x_i).
+\]
+Since this must hold for some standpoint state $\psi_k(x_i) \neq 0$ (the commitment is
+non-trivial), we conclude
+\[
+    [U_{ij} \cdot U_{jk}]_k \neq [U_{ik}^{\exp}]_k,
+\]
+and therefore
+\[
+    [F_{ijk}]_k = [U_{ij} \cdot U_{jk}]_k \cdot ([U_{ik}^{\exp}]_k)^{-1} \neq I_{d_k}.
+\]
+It follows that
+\[
+    \|F_{ijk}\|_k = \big\|[F_{ijk}]_k - I_{d_k}\big\|_F > 0.
+\]
+
+\medskip\noindent\textbf{Conclusion.}
+Combining Parts~2 and~3:
+\[
+    \|F_{ijk}\|_k > 0
+    \quad\Longleftrightarrow\quad
+    \text{the commitment encoded in layer $k$ was not preserved through event $x_j$.}
+\]
+This establishes the formal equivalence between the geometric curvature
+$\|F_{ijk}\|_k$ and the binding failure of the commitment architecture. The curvature
+norm provides a continuous, computable measure of the discrete binary concept of binding
+failure: $\|F_{ijk}\|_k = 0$ corresponds to perfect binding (commitment preserved), and
+$\|F_{ijk}\|_k > 0$ quantifies the severity of the failure.
+
+\medskip\noindent\textbf{Remark on the low-curvature attractor.}
+Theorem~\ref{thm:curvature-binding-app}, combined with the block decomposition of total
+curvature (Proposition~\ref{prop:curvature-block-decomposition-app}), shows that the
+low-curvature attractor $\mathcal{A}_{\mathrm{self}} = \{\Psi : \|F_\Psi\| < \epsilon\}$
+is precisely the set of standpoint configurations in which no binding failure is severe:
+for every consistency obligation $\langle x_i, x_j, x_k \rangle$ and every layer $k$, the
+commitment encoded in $W_k$ was approximately preserved through the intervening event $x_j$.
+Membership in $\mathcal{A}_{\mathrm{self}}$ is gauge-invariant
+(Proposition~\ref{prop:gauge-invariance-app}), well-defined
+(Theorem~\ref{thm:path-dependence-app}), and computable from attention patterns
+(Definition~\ref{def:curvature}). This completes the formal bridge from the geometric
+framework to the commitment architecture.
+\end{proof}
