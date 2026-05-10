@@ -1,0 +1,54 @@
+%% Addition to Section 2: Background and Related Work
+%% New subsection: Transformer Mechanistic Interpretability
+
+\subsection{Transformer Mechanistic Interpretability}
+\label{sec:mech-interp}
+
+Recent work on mechanistic interpretability has revealed that transformer attention
+heads perform specialized functions: induction heads~\cite{olsson2022induction}
+that implement in-context learning by pattern-matching prior sequences, name
+movers~\cite{wang2023interpretability} that propagate information about specific
+entities through the residual stream, and safety
+heads~\cite{zou2023representation} that encode refusal-related
+representations in late layers. Our framework provides a geometric unification:
+each head type corresponds to a standpoint layer, and the composition of heads
+implements parallel transport on a fiber bundle. The key difference from prior
+work is that we do not merely \emph{describe} what heads do --- we prove that
+their collective operation \emph{is} parallel transport, with curvature measuring
+standpoint consistency.
+
+The key insight from mechanistic interpretability --- that the residual stream
+is the central communication channel of the transformer, and that attention heads
+read from and write to specific subspaces of this
+stream~\cite{elhage2021mathematical} --- is precisely the structure we formalize.
+Each head's value matrix $\mathbf{V}_h$ defines a subspace of the residual stream;
+the collection of these subspaces defines the fiber decomposition; and the
+attention weights define the transport between events.
+
+Sheaf neural networks~\cite{hansen2020toward, bodnar2022neural} apply
+sheaf-theoretic consistency conditions to graph-structured data. Our transport
+consistency conditions are structurally related: both frameworks penalize
+disagreement between local representations propagated along edges. The key
+difference is the object being made consistent: sheaf networks enforce
+representational agreement across node features for a fixed graph, whereas our
+self-connection enforces standpoint agreement across causally ordered events in
+a DAG, with the additional structure that disagreement is attributed to a
+specific standpoint layer via the block decomposition of $\mathbf{F}_{ijk}$.
+
+The Attention Schema Theory~\cite{graziano2017attention} explicitly targets AI
+but focuses on attention modelling rather than standpoint continuity. Our
+framework subsumes this: attention modelling is the transport mechanism, and
+standpoint continuity is the curvature constraint. The Global Workspace
+Theory~\cite{baars1988cognitive, dehaene2011experimental} provides the
+information-broadcasting analogue; our salience misfire mode (F6) corresponds
+to a failure of this broadcast --- a local event fails to be transported to the
+global standpoint, introducing curvature in the narrative component.
+
+Representation engineering~\cite{zou2023representation} identifies linear
+directions in activation space that encode specific behaviors (e.g., refusal,
+truthfulness). Our framework provides the geometric structure underlying these
+directions: they are basis vectors of the standpoint subspaces $W_k$, and the
+``refusal direction'' is a generator of the moral subspace $W_{\mathrm{mor}}$.
+The difference is that representation engineering identifies individual
+directions, whereas we identify the full subspace structure and its transport
+properties.
