@@ -1,0 +1,189 @@
+% ==============================================================================
+% Figure 1: LCESA Framework Overview
+% Three-layer instantiation: Abstract Geometry -> Five-Layer Model -> Transformer
+%
+% Usage: \input{figures/fig1_lcesa_framework.tex}
+% Requires: \usepackage{tikz}
+%           \usetikzlibrary{arrows.meta, positioning, shapes.geometric,
+%                           decorations.pathreplacing, calc, fit}
+% ==============================================================================
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    % --- global styles ---
+    >=Stealth,
+    node distance=0.6cm and 0.4cm,
+    every node/.style={font=\small},
+    % --- layer box styles ---
+    layerbox/.style={
+        draw=#1, fill=#1!6, rounded corners=4pt,
+        inner sep=8pt, minimum width=12.8cm
+    },
+    % --- component box styles ---
+    abstractbox/.style={
+        draw=abstractclr, fill=abstractclr!10, rounded corners=3pt,
+        inner sep=5pt, minimum height=0.9cm, font=\small
+    },
+    layercomp/.style={
+        draw=layerclr, fill=layerclr!10, rounded corners=3pt,
+        inner sep=4pt, minimum height=0.85cm, minimum width=1.9cm,
+        font=\small, align=center
+    },
+    instbox/.style={
+        draw=instclr, fill=instclr!10, rounded corners=3pt,
+        inner sep=4pt, minimum height=0.85cm, minimum width=2.1cm,
+        font=\small, align=center
+    },
+    % --- arrow styles ---
+    maparrow/.style={
+        ->, line width=0.9pt, draw=#1, >=Stealth
+    },
+    maplabel/.style={
+        font=\footnotesize, text=#1, fill=white, inner sep=1.5pt
+    },
+]
+
+% === Colors ===
+\definecolor{abstractclr}{RGB}{41, 98, 165}   % blue for abstract geometry
+\definecolor{layerclr}{RGB}{34, 139, 87}      % green for five-layer model
+\definecolor{instclr}{RGB}{180, 95, 25}       % orange for transformer instantiation
+\definecolor{arrowclr}{RGB}{100, 100, 100}
+
+% ====================================================================
+% LAYER 1: Abstract Geometric Framework
+% ====================================================================
+\node[layerbox=abstractclr, label={[font=\small\bfseries, abstractclr]above:Abstract Geometric Framework}]
+    (layer1) at (0, 7.4) {};
+
+% Components inside layer 1
+\node[abstractbox, minimum width=2.4cm] (eventspace)
+    at (-4.6, 7.4) {$\mathcal{X} = (V, E, T)$};
+\node[abstractbox, minimum width=1.6cm] (fiber)
+    at (-1.6, 7.4) {$E_x$};
+\node[abstractbox, minimum width=2.0cm] (connection)
+    at (1.1, 7.4) {$A_{\Psi}$};
+\node[abstractbox, minimum width=1.6cm] (curvature)
+    at (3.6, 7.4) {$F$};
+\node[abstractbox, minimum width=2.0cm] (gauge)
+    at (5.8, 7.4) {$G = \prod_k O(d_k)$};
+
+% Sub-labels beneath each component
+\node[font=\scriptsize, text=abstractclr] at (-4.6, 6.85) {event space};
+\node[font=\scriptsize, text=abstractclr] at (-1.6, 6.85) {fiber};
+\node[font=\scriptsize, text=abstractclr] at (1.1, 6.85) {connection};
+\node[font=\scriptsize, text=abstractclr] at (3.6, 6.85) {curvature};
+\node[font=\scriptsize, text=abstractclr] at (5.8, 6.85) {gauge group};
+
+% Arrows inside layer 1 (horizontal flow)
+\draw[->, abstractclr, line width=0.6pt] (eventspace.east) -- (fiber.west);
+\draw[->, abstractclr, line width=0.6pt] (fiber.east) -- (connection.west);
+\draw[->, abstractclr, line width=0.6pt] (connection.east) -- (curvature.west);
+\draw[->, abstractclr, line width=0.6pt] (curvature.east) -- (gauge.west);
+
+% ====================================================================
+% LAYER 2: Five-Layer Standpoint Model
+% ====================================================================
+\node[layerbox=layerclr, label={[font=\small\bfseries, layerclr]above:Five-Layer Standpoint Model $\Psi_t$}]
+    (layer2) at (0, 4.8) {};
+
+% Five standpoint layer components
+\node[layercomp, minimum width=2.1cm] (psi_min)
+    at (-4.7, 4.8) {$\psi_{\min}$\\[-2pt]{\scriptsize minimal self}};
+\node[layercomp, minimum width=2.1cm] (psi_nar)
+    at (-2.3, 4.8) {$\psi_{\mathrm{nar}}$\\[-2pt]{\scriptsize narrative}};
+\node[layercomp, minimum width=2.1cm] (psi_soc)
+    at (0.1, 4.8) {$\psi_{\mathrm{soc}}$\\[-2pt]{\scriptsize social}};
+\node[layercomp, minimum width=2.1cm] (psi_mor)
+    at (2.5, 4.8) {$\psi_{\mathrm{mor}}$\\[-2pt]{\scriptsize moral}};
+\node[layercomp, minimum width=2.1cm] (psi_pos)
+    at (4.9, 4.8) {$\psi_{\mathrm{pos}}$\\[-2pt]{\scriptsize positional}};
+
+% Orthogonal decomposition label
+\node[font=\scriptsize, text=layerclr] at (0, 4.2)
+    {$\Psi_t = \psi_{\mathrm{min}} \oplus \psi_{\mathrm{nar}} \oplus \psi_{\mathrm{soc}} \oplus \psi_{\mathrm{mor}} \oplus \psi_{\mathrm{pos}}$};
+
+% ====================================================================
+% LAYER 3: Transformer Instantiation
+% ====================================================================
+\node[layerbox=instclr, label={[font=\small\bfseries, instclr]above:Transformer Instantiation}]
+    (layer3) at (0, 2.0) {};
+
+% Components inside layer 3
+\node[instbox, minimum width=2.6cm] (turns)
+    at (-4.3, 2.0) {Turns $x_i$\\[-2pt]{\scriptsize (events)}};
+\node[instbox, minimum width=2.6cm] (subspaces)
+    at (-1.3, 2.0) {Head subspaces\\[-2pt]{\scriptsize $W_k = \operatorname{span}(V_h)$}};
+\node[instbox, minimum width=2.6cm] (attn)
+    at (1.7, 2.0) {Attention $\alpha$\\[-2pt]{\scriptsize (transport $U_{ij}$)}};
+\node[instbox, minimum width=2.6cm] (pathdep)
+    at (4.7, 2.0) {Path-dependence\\[-2pt]{\scriptsize (curvature $F_{ijk}$)}};
+
+% Sub-labels
+\node[font=\scriptsize, text=instclr] at (-4.3, 1.35) {$V = \{x_1, \ldots, x_n\}$};
+\node[font=\scriptsize, text=instclr] at (-1.3, 1.35) {$\mathbb{R}^d = \bigoplus_k W_k$};
+\node[font=\scriptsize, text=instclr] at (1.7, 1.35) {$U_{ij} = \sum_k \bar\alpha_{ji}^{(k)} P_{W_k}$};
+\node[font=\scriptsize, text=instclr] at (4.7, 1.35) {$F_{ijk} = U_{ij} U_{jk} (U_{ik}^{\exp})^{-1}$};
+
+% Arrows inside layer 3
+\draw[->, instclr, line width=0.6pt] (turns.east) -- (subspaces.west);
+\draw[->, instclr, line width=0.6pt] (subspaces.east) -- (attn.west);
+\draw[->, instclr, line width=0.6pt] (attn.east) -- (pathdep.west);
+
+% ====================================================================
+% INTER-LAYER MAPPING ARROWS
+% ====================================================================
+
+% Layer 1 -> Layer 2 (left side)
+\draw[maparrow=arrowclr, dashed] (-3.0, 6.55) -- (-3.0, 5.45)
+    node[midway, right=3pt, maplabel=arrowclr]
+    {instantiate};
+\node[font=\scriptsize, text=arrowclr, anchor=west] at (-2.8, 5.95)
+    {$\Psi_{x_i} \in \bigoplus_k W_k$};
+
+% Layer 2 -> Layer 3 (right side)
+\draw[maparrow=arrowclr, dashed] (3.0, 4.15) -- (3.0, 3.0)
+    node[midway, right=3pt, maplabel=arrowclr]
+    {compute};
+\node[font=\scriptsize, text=arrowclr, anchor=west] at (3.2, 3.55)
+    {attention heads};
+
+% Layer 1 -> Layer 3 (curved arrow, right side, bypassing layer 2)
+\draw[maparrow=arrowclr, dotted, line width=0.8pt]
+    (5.6, 6.55) to[out=-70, in=70]
+    node[right=2pt, midway, font=\scriptsize, text=arrowclr]
+    {direct instantiation}
+    (5.6, 3.0);
+
+% ====================================================================
+% BRACE: "Standpoint Bundle" annotation on the left
+% ====================================================================
+\draw[decorate, decoration={brace, amplitude=6pt, mirror}, line width=0.7pt, arrowclr]
+    (-6.6, 2.8) -- (-6.6, 6.2)
+    node[midway, left=8pt, font=\footnotesize\bfseries, text=arrowclr, rotate=90, anchor=south]
+    {Standpoint Bundle};
+
+% ====================================================================
+% RIGHT ANNOTATION: Key identity
+% ====================================================================
+\node[draw=arrowclr, fill=white, rounded corners=2pt,
+      inner sep=5pt, font=\footnotesize, align=center, text width=3.4cm]
+    at (7.2, 4.8)
+    {\textbf{Key Identity:}\\[2pt]
+     Attention $=$ Parallel\\Transport on $(E, X, \pi)$};
+
+\end{tikzpicture}
+\caption{%
+    \textbf{LCESA framework overview.}
+    The abstract geometric framework (top) defines the event space~$\mathcal{X}$, fiber~$E_x$,
+    connection~$A_\Psi$, and curvature~$F$ on the standpoint bundle.
+    The five-layer standpoint model (middle) instantiates the fiber as a direct sum of
+    psychologically grounded subspaces~$\psi_k$.
+    The transformer instantiation (bottom) maps each geometric object to a concrete
+    architectural component: events to turns, fibers to head value subspaces~$W_k$,
+    connection to attention weights~$\alpha$, and curvature to path-dependence of
+    composite transport.
+    Dashed arrows indicate the instantiation mapping between layers.
+}
+\label{fig:lcesa-framework}
+\end{figure}

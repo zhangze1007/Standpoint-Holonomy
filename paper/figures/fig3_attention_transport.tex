@@ -1,0 +1,142 @@
+% ==============================================================================
+% Figure 3: Attention as Parallel Transport -- Curvature from Path-Dependence
+%
+% Shows two paths from x_i to x_k and the curvature gap F_{ijk}.
+%
+% Usage: \input{figures/fig3_attention_transport.tex}
+% Requires: \usepackage{tikz}
+%           \usetikzlibrary{arrows.meta, positioning, calc, decorations.pathreplacing}
+% ==============================================================================
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+    >=Stealth,
+    every node/.style={font=\small},
+    event/.style={
+        circle, draw=black!70, fill=white, line width=0.8pt,
+        inner sep=0pt, minimum size=1.0cm, font=\normalsize
+    },
+    directpath/.style={
+        line width=1.4pt, draw=directclr, >=Stealth
+    },
+    indirectpath/.style={
+        line width=1.4pt, draw=indirectclr, >=Stealth
+    },
+    curvedlabel/.style={
+        font=\footnotesize, fill=white, inner sep=2pt, text=#1
+    },
+]
+
+% === Colors ===
+\definecolor{directclr}{RGB}{200, 55, 55}     % red for direct path
+\definecolor{indirectclr}{RGB}{41, 98, 165}   % blue for indirect path
+\definecolor{curvclr}{RGB}{160, 50, 160}      % purple for curvature
+\definecolor{gapclr}{RGB}{160, 50, 160}
+
+% ====================================================================
+% EVENT NODES
+% ====================================================================
+\node[event] (xi) at (0, 0) {$x_i$};
+\node[event] (xj) at (4.0, 0) {$x_j$};
+\node[event] (xk) at (2.0, 3.8) {$x_k$};
+
+% ====================================================================
+% DIRECT PATH: x_i -> x_k (expected transport)
+% ====================================================================
+\draw[directpath, ->]
+    (xi) to[bend left=12]
+    node[curvedlabel=directclr, left=3pt, pos=0.5, sloped]
+    {$U_{ik}^{\exp}$}
+    (xk);
+
+% ====================================================================
+% INDIRECT PATH: x_i -> x_j -> x_k (composite transport)
+% ====================================================================
+\draw[indirectpath, ->]
+    (xi) -- node[curvedlabel=indirectclr, below=4pt, pos=0.5]
+    {$U_{ij}$}
+    (xj);
+\draw[indirectpath, ->]
+    (xj) to[bend left=12]
+    node[curvedlabel=indirectclr, right=3pt, pos=0.5, sloped]
+    {$U_{jk}$}
+    (xk);
+
+% ====================================================================
+% CURVATURE GAP
+% ====================================================================
+% Shade the region between the two paths to indicate curvature
+\fill[curvclr, opacity=0.07]
+    (xi) to[bend left=12] (xk) -- (xj) to[bend right=12] (xi) -- cycle;
+
+% Dashed line showing the "gap" between the two transport results at x_k
+\coordinate (direct_end) at ($(xi)!0.72!(xk) + (0.15, 0.05)$);
+\coordinate (indirect_end) at ($(xj)!0.62!(xk) + (-0.15, 0.05)$);
+
+% Curvature annotation -- placed in the interior of the triangle
+\node[
+    draw=curvclr, fill=curvclr!6, rounded corners=3pt,
+    inner sep=6pt, font=\small, align=center, text width=3.6cm
+] (curvlabel) at (2.5, 1.4)
+    {$F_{ijk} = U_{ij} \cdot U_{jk}$\\[1pt]$\cdot\, (U_{ik}^{\exp})^{-1}$};
+
+% Arrows from the annotation to the gap region
+\draw[->, curvclr, line width=0.7pt, dashed]
+    (curvlabel.north west) to[out=140, in=-40]
+    ($(xi)!0.60!(xk) + (0.18, 0.0)$);
+\draw[->, curvclr, line width=0.7pt, dashed]
+    (curvlabel.north east) to[out=40, in=200]
+    ($(xj)!0.55!(xk) + (-0.18, 0.0)$);
+
+% ====================================================================
+% EVENT LABELS (semantic annotations beneath nodes)
+% ====================================================================
+\node[font=\scriptsize, text=black!60, below=6pt of xi] {assertion};
+\node[font=\scriptsize, text=black!60, below=6pt of xj] {pressure turn};
+\node[font=\scriptsize, text=black!60, above=6pt of xk] {response};
+
+% ====================================================================
+% PATH LEGEND (bottom)
+% ====================================================================
+\draw[directpath] (0.3, -1.6) -- (1.2, -1.6);
+\node[font=\footnotesize, right=3pt, text=directclr] at (1.2, -1.6)
+    {direct (expected) transport \; $U_{ik}^{\exp}$};
+
+\draw[indirectpath] (0.3, -2.1) -- (1.2, -2.1);
+\node[font=\footnotesize, right=3pt, text=indirectclr] at (1.2, -2.1)
+    {composite transport \; $U_{ij} \cdot U_{jk}$};
+
+\draw[curvclr, dashed, line width=0.7pt] (0.3, -2.6) -- (1.2, -2.6);
+\node[font=\footnotesize, right=3pt, text=curvclr] at (1.2, -2.6)
+    {curvature \; $F_{ijk} \neq I_d$ \; (path-dependence)};
+
+% ====================================================================
+% CONDITION NOTE (right side)
+% ====================================================================
+\node[font=\footnotesize, align=left, text width=4.2cm, anchor=north west]
+    at (5.0, 3.6)
+    {$F_{ijk} = I_d$ \;\textbar\; transport is\\
+     path-independent\\[3pt]
+     $\|F_{ijk}\|_k > 0$ \;\textbar\; binding\\
+     failure in layer $k$};
+
+% ====================================================================
+% TRIANGLE EDGE: faint outline to emphasize the loop
+% ====================================================================
+\draw[black!15, line width=0.5pt]
+    (xi) -- (xj) -- (xk) -- cycle;
+
+\end{tikzpicture}
+\caption{%
+    \textbf{Curvature as path-dependence of attention transport.}
+    Two paths connect event~$x_i$ to event~$x_k$: the direct (expected) transport~$U_{ik}^{\exp}$
+    (red), and the composite transport~$U_{ij} \cdot U_{jk}$ through the intermediate
+    pressure turn~$x_j$ (blue).
+    The curvature~$F_{ijk} = U_{ij} \cdot U_{jk} \cdot (U_{ik}^{\exp})^{-1}$ measures
+    the failure of these two paths to agree.
+    When~$F_{ijk} = I_d$, transport is path-independent and the standpoint is preserved;
+    when~$\|F_{ijk}\|_k > 0$, layer~$k$ has experienced a binding failure.
+}
+\label{fig:attention-transport}
+\end{figure}
