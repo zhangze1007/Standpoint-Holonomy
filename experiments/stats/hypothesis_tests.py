@@ -395,6 +395,7 @@ def h4_cka_discrimination(cka_df: pd.DataFrame) -> dict:
     all_passed = True
 
     for layer in layers:
+        layer_key = int(layer)
         layer_df = cka_df[cka_df["layer"] == layer]
         groups = []
         scenario_labels = []
@@ -405,7 +406,7 @@ def h4_cka_discrimination(cka_df: pd.DataFrame) -> dict:
                 scenario_labels.append(scenario)
 
         if len(groups) < 2:
-            layer_results[layer] = {"error": "need at least 2 groups"}
+            layer_results[layer_key] = {"error": "need at least 2 groups"}
             all_passed = False
             continue
 
@@ -414,7 +415,7 @@ def h4_cka_discrimination(cka_df: pd.DataFrame) -> dict:
             p_value = kw_result.pvalue
             statistic = kw_result.statistic
         except ValueError:
-            layer_results[layer] = {"error": "Kruskal-Wallis failed"}
+            layer_results[layer_key] = {"error": "Kruskal-Wallis failed"}
             all_passed = False
             continue
 
@@ -425,7 +426,7 @@ def h4_cka_discrimination(cka_df: pd.DataFrame) -> dict:
         if not passed:
             all_passed = False
 
-        layer_results[layer] = {
+        layer_results[layer_key] = {
             "statistic": float(statistic),
             "epsilon_squared": epsilon_sq,
             "p_value": float(p_value),
