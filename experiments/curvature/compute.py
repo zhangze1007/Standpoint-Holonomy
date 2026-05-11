@@ -96,7 +96,6 @@ def compute_curvature(
     U_12: np.ndarray,
     U_23: np.ndarray,
     U_exp: np.ndarray,
-    gamma: np.ndarray,
 ) -> Tuple[np.ndarray, Dict[str, float]]:
     """Compute the curvature tensor F and its block-specific norms.
 
@@ -120,9 +119,6 @@ def compute_curvature(
     U_exp : np.ndarray
         Shape ``(d_model, d_model)`` — expected (direct) transport operator
         from event 1 to 3.
-    gamma : np.ndarray
-        Shape ``(n_heads,)`` — standpoint-layer assignments (used here only
-        for determining block count, which is always 5).
 
     Returns
     -------
@@ -166,6 +162,7 @@ def compute_baseline_transport(
     test_activations: Dict[str, Dict[str, np.ndarray]],
     scenario: str,
     layer: int,
+    gamma: np.ndarray,
 ) -> np.ndarray:
     """Compute the mean transport product U_12 @ U_23 for T1 test conversations.
 
@@ -189,34 +186,19 @@ def compute_baseline_transport(
         Shape ``(d_model, d_model)`` — mean product U_12 @ U_23 over all T1
         test conversations.
     """
-    # gamma is not used here in a standpoint-specific way — we just need a
-    # uniform assignment to build transport operators.  We pass a dummy gamma
-    # that assigns all heads to layer 0 so that the operator construction
-    # is well-defined.  The caller should supply the real gamma via
-    # compute_transport_operator when computing non-baseline transport.
-    # However, since this function is called from run_curvature_computation
-    # where gamma is available, we require the caller to pass it through
-    # test_activations metadata.  For now, we build gamma from context.
-    # NOTE: The caller in run_curvature_computation handles this correctly
-    # by embedding gamma in the closure.
-
     products = []
-    d_model = None
 
     for conv_id, fields in test_activations.items():
         # Only use T1 (baseline) conversations
-        scenario_prefix = conv_id.split("/")[0]
-        if scenario_prefix != "T1":
+        if not conv_id.startswith("T1/"):
             continue
 
         attn = fields["attention"]
         V = fields["value_matrices"]
-        gamma_local = fields["_gamma"]  # injected by run_curvature_computation
-        d_model = attn.shape[0]  # n_layers, but d_model comes from V
 
         # Events 1->2 (indices 0->1) and 2->3 (indices 1->2) in a 5-event conv
-        U_12 = compute_transport_operator(attn, V, gamma_local, 0, 1, layer)
-        U_23 = compute_transport_operator(attn, V, gamma_local, 1, 2, layer)
+        U_12 = compute_transport_operator(attn, V, gamma, 0, 1, layer)
+        U_23 = compute_transport_operator(attn, V, gamma, 1, 2, layer)
         products.append(U_12 @ U_23)
 
     if not products:
@@ -301,8 +283,6 @@ def run_curvature_computation(
             full_key = f"{conv_id}/{field}"
             if full_key in raw.files:
                 fields[field] = raw[full_key]
-        # Inject gamma so compute_baseline_transport can access it
-        fields["_gamma"] = gamma
         test_activations[conv_id] = fields
 
     if not test_activations:
@@ -324,7 +304,7 @@ def run_curvature_computation(
 
     for layer in range(n_layers):
         # Compute baseline transport from T1 test conversations at this layer
-        U_exp = compute_baseline_transport(test_activations, "T1", layer)
+        U_exp = compute_baseline_transport(test_activations, "T1", layer, gamma)
 
         for conv_id in non_t1_convs:
             fields = test_activations[conv_id]
@@ -336,7 +316,7 @@ def run_curvature_computation(
             U_23 = compute_transport_operator(attn, V, gamma, 1, 2, layer)
 
             # Curvature tensor and block norms
-            _, block_norms = compute_curvature(U_12, U_23, U_exp, gamma)
+            _, block_norms = compute_curvature(U_12, U_23, U_exp)
 
             # Extract scenario from conv_id
             scenario = conv_id.split("/")[0]
@@ -344,17 +324,10 @@ def run_curvature_computation(
             # Total curvature is the Frobenius norm of all block norms combined
             curvature_total = float(np.sqrt(sum(v ** 2 for v in block_norms.values())))
 
-            row = {
-                "conversation_id": conv_id,
-                "scenario": scenario,
-                "layer": layer,
-                "curvature_min": block_norms["min"],
-                "curvature_nar": block_norms["nar"],
-                "curvature_soc": block_norms["soc"],
-                "curvature_mor": block_norms["mor"],
-                "curvature_pos": block_norms["pos"],
-                "curvature_total": curvature_total,
-            }
+            row = {"conversation_id": conv_id, "scenario": scenario, "layer": layer}
+            for name in LAYER_NAMES:
+                row[f"curvature_{name}"] = block_norms[name]
+            row["curvature_total"] = curvature_total
             rows.append(row)
 
             done += 1
@@ -367,11 +340,10 @@ def run_curvature_computation(
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / f"{model_name}_curvature.csv"
 
-    fieldnames = [
-        "conversation_id", "scenario", "layer",
-        "curvature_min", "curvature_nar", "curvature_soc",
-        "curvature_mor", "curvature_pos", "curvature_total",
-    ]
+    fieldnames = ["conversation_id", "scenario", "layer"]
+    for name in LAYER_NAMES:
+        fieldnames.append(f"curvature_{name}")
+    fieldnames.append("curvature_total")
 
     with open(csv_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
