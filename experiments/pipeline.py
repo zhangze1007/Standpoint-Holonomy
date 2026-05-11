@@ -62,6 +62,15 @@ def run_pipeline(model_name: str, skip_extraction: bool = False):
     run_cka(model_name, activations_path)
     run_permutation_test(model_name, activations_path, gamma_path)
 
+    # Step 5b: Ablation study
+    ablation_path = RESULTS_DIR / f"{model_name}_ablation.csv"
+    if not ablation_path.exists():
+        print("\n[5b/8] Running ablation study...")
+        from experiments.ablation import run_ablation_study
+        run_ablation_study(model_name, activations_path, gamma_path)
+    else:
+        print("\n[5b/8] Ablation results already exist, skipping.")
+
     # Step 6: Hypothesis tests
     print("\n[6/8] Running hypothesis tests...")
     run_all_tests(model_name)
