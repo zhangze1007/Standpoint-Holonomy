@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Large data / cache
+cache/
+data/*.npz
+data/gpt2_grouping.npz
+
+# Generated results (reproducible from pipeline)
+results/
+
+# Environment
+.venv/
+*.egg-info/
+
+# Papers (unrelated)
+paper*.pdf
+
+# Plugin docs
+docs/superpowers/
+.remember/
