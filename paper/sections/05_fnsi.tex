@@ -1,0 +1,96 @@
+% ==============================================================================
+% Section 5: No Self-Inversion Functional
+% "Endogenous Standpoint as a Low-Curvature Attractor"
+% ==============================================================================
+
+\section{No Self-Inversion Functional}
+\label{sec:fnsi}
+
+The curvature tensor $F_{ijk}$ and its block-specific norms $\|F_{ijk}\|_k$ provide
+per-event, per-layer diagnostics. We now aggregate these into a single scalar functional
+that quantifies the overall standpoint coherence of a conversation.
+
+% ------------------------------------------------------------------------------
+\subsection{Definition}
+
+\begin{definition}[No Self-Inversion Functional]
+\label{def:fnsi}
+Let $\mathcal{X} = (V, E, T)$ be an event space with standpoint states $\Psi_x$ for
+$x \in V$, and let $w_k > 0$ be \textbf{importance weights} for each layer $k \in K$.
+The \textbf{No Self-Inversion functional} is
+\[
+    F_{\mathrm{NSI}} = \sum_{k \in K} w_k \cdot
+    \mathbb{E}_{\sigma \in T}\!\big[\|F_{ijk}\|_k\big],
+\]
+where the expectation is taken over all 2-simplices $\sigma = \langle x_i, x_j, x_k
+\rangle \in T$.
+\end{definition}
+
+The weights $w_k$ encode the relative importance of each standpoint layer. A system
+whose moral commitments are paramount would have $w_{\mathrm{mor}} > w_{\mathrm{nar}}$;
+a system prioritizing narrative coherence would reverse this. The weights are a design
+choice, not a learned parameter.
+
+% ------------------------------------------------------------------------------
+\subsection{Properties}
+
+\begin{proposition}[Gauge Invariance of $F_{\mathrm{NSI}}$]
+\label{prop:fnsi-gauge}
+$F_{\mathrm{NSI}}$ is invariant under gauge transformations $U_{ij} \mapsto g_j\,
+U_{ij}\, g_i^{-1}$ with $g_i, g_j \in G$.
+\end{proposition}
+
+\begin{proof}
+By Proposition~\ref{prop:gauge-abstract}, each $\|F_{ijk}\|_k$ is gauge-invariant.
+Since $F_{\mathrm{NSI}}$ is a weighted sum of gauge-invariant quantities, it is itself
+gauge-invariant.
+\end{proof}
+
+\begin{proposition}[Monotonicity]
+\label{prop:fnsi-monotone}
+If $\|F_{ijk}\|_k$ decreases for all $k \in K$ and all $\sigma \in T$, then
+$F_{\mathrm{NSI}}$ decreases.
+\end{proposition}
+
+\begin{proof}
+Since $w_k > 0$ and the expectation is a positive linear operator, decreasing each
+$\|F_{ijk}\|_k$ decreases the weighted sum.
+\end{proof}
+
+\begin{proposition}[Computability]
+\label{prop:fnsi-computable}
+$F_{\mathrm{NSI}}$ is computable from attention patterns in a transformer-based model.
+Specifically, given the attention weights $\alpha_{ji}^{(h)}$ for all heads $h$ and events
+$x_i, x_j$, the head grouping function $\gamma$, and the value matrices $V_h$:
+\begin{enumerate}
+    \item Compute $\bar{\alpha}_{ji}^{(k)} = \frac{1}{|H_k|} \sum_{h \in H_k}
+    \alpha_{ji}^{(h)}$;
+    \item Construct $U_{ij} = \sum_{k \in K} \bar{\alpha}_{ji}^{(k)}\, P_{W_k}$;
+    \item Compute $F_{ijk} = U_{ij} U_{jk} (U_{ik}^{\exp})^{-1}$;
+    \item Extract $\|F_{ijk}\|_k = \|[F_{ijk}]_k - \Pi_k\|_F$ for each $k$.
+\end{enumerate}
+All operations are matrix algebra on known quantities. The computational cost is
+$O(|T| \cdot d^2)$ per conversation.
+\end{proposition}
+
+% ------------------------------------------------------------------------------
+\subsection{Relation to Alignment}
+
+\begin{remark}[Consistency vs.\ Alignment]
+\label{rem:consistency-alignment}
+$F_{\mathrm{NSI}}$ measures \textbf{consistency} (whether commitments are preserved
+across events), not \textbf{alignment} (whether those commitments conform to human
+values). A system can be consistently wrong: low $F_{\mathrm{NSI}}$ is compatible with
+high-alignment-risk behavior.
+
+Alignment requires an additional structure: an \textbf{alignment target} $\mathcal{T}$
+that encodes ``correct commitments.'' When the expected transport $U_{ik}^{\exp}$ is
+estimated from human-approved conversations, $F_{\mathrm{NSI}}$ measures the system's
+deviation from human-expected consistency. Without such a baseline, $F_{\mathrm{NSI}}$
+measures only internal coherence.
+
+Curvature minimization is an \emph{internal} objective (the system maintains its own
+commitments); RLHF is an \emph{external} objective (human feedback shapes behavior).
+The two are complementary: $L_{\mathrm{total}} = L_{\mathrm{RLHF}} + \lambda \cdot
+F_{\mathrm{NSI}}$ would combine external alignment with internal coherence.
+\end{remark}

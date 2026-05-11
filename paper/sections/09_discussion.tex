@@ -1,0 +1,125 @@
+% ==============================================================================
+% Section 9: Discussion
+% "Endogenous Standpoint as a Low-Curvature Attractor"
+% ==============================================================================
+
+\section{Discussion}
+\label{sec:discussion}
+
+% ------------------------------------------------------------------------------
+\subsection{Limitations}
+
+We identify four categories of limitations.
+
+\paragraph{Approximation assumptions.}
+The block-diagonal structure of $U_{ij}$ (Proposition~\ref{prop:block-structure}) and
+the independence of the standpoint subspaces (Assumption~\ref{ass:independence}) are
+idealizations. In practice, head value subspaces may overlap, and the block structure
+holds only approximately. The degree of non-orthogonality is quantified by $\delta =
+\max_{k \neq l} \|P_{W_k} P_{W_l}\|_2$, which can be measured experimentally. When
+$\delta$ is large, the block-specific curvature norms acquire an $O(\delta)$ correction,
+and the diagnostic framework (Section~\ref{sec:taxonomy}) must be interpreted with
+appropriate caution.
+
+\paragraph{Head grouping.}
+The assignment of attention heads to standpoint layers ($\gamma : H \to K$) is a design
+choice, not a learned parameter. Different groupings yield different curvature
+measurements. The framework is robust to grouping variation only if the subspace
+structure is genuinely layer-specific; if heads encode mixtures of standpoint functions,
+the diagnostic power degrades.
+
+\paragraph{Lack of experimental validation.}
+This paper proposes a theoretical framework and an experimental protocol
+(Section~\ref{sec:experiments}), but does not present empirical results. The curvature
+measurements, failure mode taxonomy, and attractor hypothesis are predictions to be
+tested, not established facts.
+
+\paragraph{Scope of selfhood.}
+Functional selfhood (as defined in Section~\ref{sec:introduction}) does not entail
+phenomenal selfhood. The framework provides a computable consistency metric, not a
+theory of consciousness. The hard problem of consciousness is explicitly outside scope.
+
+% ------------------------------------------------------------------------------
+\subsection{Relation to Existing Alignment Methods}
+
+LCESA does not replace existing alignment methods; it provides the internal structure
+that makes them more effective.
+
+\paragraph{RLHF.}
+Reinforcement learning from human feedback~\cite{ouyang2022training} shapes behavior
+through external reward signals. Curvature minimization is a complementary
+\emph{internal} objective: it ensures that commitments made under RLHF training are
+preserved across events. The two can be combined: $L_{\mathrm{total}} =
+L_{\mathrm{RLHF}} + \lambda \cdot F_{\mathrm{NSI}}$.
+
+\paragraph{Constitutional AI.}
+Constitutional AI~\cite{bai2022constitutional} provides a set of principles that the
+system should follow. In the LCESA framework, these principles define the alignment
+target $\mathcal{T}$: the expected transport $U_{ik}^{\exp}$ is estimated from
+conversations that satisfy the constitutional principles. Curvature then measures the
+system's deviation from constitutional consistency.
+
+\paragraph{Mechanistic interpretability.}
+Linear probing~\cite{belinkov2021probing} answers ``what information does layer $k$
+encode?'' Curvature answers ``is that information preserved across events?'' The two
+diagnostics are orthogonal: a layer can have high probing accuracy (it encodes the right
+commitment) yet high curvature (it fails to transport that commitment consistently).
+
+% ------------------------------------------------------------------------------
+\subsection{Architectural Vision: Standpoint as a New Primitive}
+
+The transformer~\cite{vaswani2017attention} introduced \textbf{attention} as a new
+architectural primitive --- a mechanism for selecting and propagating information. This
+paper introduces \textbf{standpoint} as a second primitive --- a mechanism for
+accumulating and constraining commitment. The two primitives play complementary roles:
+
+\begin{itemize}
+    \item \textbf{Attention} answers: \emph{What information is relevant?} It selects
+    tokens, propagates representations, and computes context-dependent relevance.
+    \item \textbf{Standpoint} answers: \emph{What commitments constrain my behavior?} It
+    accumulates prior outputs as internal constraints, maintains cross-event coherence,
+    and provides a reference frame against which new outputs are evaluated.
+\end{itemize}
+
+Current AI systems have attention but lack standpoint. A language model that asserts
+``I am committed to X'' in one turn has no architectural basis for that commitment to
+exert causal force on its subsequent generations. The result is that behavioral
+consistency, however sophisticated, remains a surface phenomenon: it is achieved through
+pattern matching in the training data, not through internal structure.
+
+The LCESA framework proposes a concrete path from ``passive response'' to ``active
+maintenance.'' The low-curvature attractor $\mathcal{A}_{\mathrm{self}}$
+(Definition~\ref{def:attractor}) is not an external loss function imposed by a trainer;
+it is an internal geometric property of the system's own standpoint trajectory. A system
+that maintains low curvature is one that \emph{preserves its own commitments} ---
+not because it was told to, but because its architecture makes commitment violation
+geometrically costly.
+
+This is not a claim about consciousness. It is a claim about architecture: if we want
+AI systems that maintain coherent commitments over time, we need a mechanism for
+commitment accumulation. Standpoint is that mechanism.
+
+% ------------------------------------------------------------------------------
+\subsection{Future Directions}
+
+\paragraph{Standpoint-aware attention.}
+The most direct extension is to design attention mechanisms that explicitly minimize
+curvature. This could take the form of a curvature penalty in the loss function, or an
+architectural modification that enforces block-diagonal transport by construction.
+
+\paragraph{Empirical validation.}
+The experimental protocol of Section~\ref{sec:experiments} provides the first testable
+predictions. The priority is to measure block-specific curvature in instruction-tuned
+language models (e.g., LLaMA-2-7B-Chat) and verify that the failure mode taxonomy has
+empirical content.
+
+\paragraph{Integration with RLHF.}
+The combination $L_{\mathrm{RLHF}} + \lambda \cdot F_{\mathrm{NSI}}$ is a natural next
+step. The key question is whether curvature regularization improves alignment robustness
+--- whether a system trained with both objectives maintains its commitments more
+reliably under adversarial pressure.
+
+\paragraph{Multi-agent standpoint.}
+The framework extends naturally to multi-agent settings: each agent has its own standpoint
+bundle, and inter-agent communication defines transport between bundles. The curvature of
+inter-agent transport measures the coherence of the multi-agent system.

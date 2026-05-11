@@ -1,0 +1,235 @@
+% ==============================================================================
+% Section 3: Geometric Framework
+% "Endogenous Standpoint as a Low-Curvature Attractor"
+% ==============================================================================
+
+\section{Geometric Framework}
+\label{sec:geometric-framework}
+
+This section develops the abstract geometric framework for endogenous standpoint.
+All definitions are stated independently of any specific architectural instantiation;
+the transformer-based realization is deferred to Section~\ref{sec:instantiation}.
+We work in the category of finite-dimensional real vector spaces with smooth maps.
+
+% ------------------------------------------------------------------------------
+\subsection{Event Space}
+\label{sec:event-space-abstract}
+
+\begin{definition}[Event Space]
+\label{def:event-space}
+An \textbf{event space} is a triple $\mathcal{X} = (V, E, T)$ where:
+\begin{enumerate}
+    \item $V$ is a finite set of \textbf{events} (vertices);
+    \item $E \subseteq V \times V$ is a set of directed \textbf{causal edges};
+    \item $T \subseteq V \times V \times V$ is a set of \textbf{2-simplices} (consistency
+    obligations): each $\sigma = \langle x_i, x_j, x_k \rangle \in T$ represents the
+    obligation that the standpoint at $x_k$ should cohere with the standpoint at $x_i$,
+    mediated by the intervening event $x_j$.
+\end{enumerate}
+The 2-simplices $T$ encode the minimal consistency structure: for each $\sigma \in T$,
+there exist edges $(x_i, x_j), (x_j, x_k) \in E$, and the pair $(x_i, x_k)$ represents
+the expected (direct) transport path.
+\end{definition}
+
+% ------------------------------------------------------------------------------
+\subsection{Standpoint Fiber and Metric}
+\label{sec:fiber-abstract}
+
+\begin{definition}[Standpoint Fiber]
+\label{def:fiber}
+Let $K$ be a finite index set. The \textbf{standpoint fiber} at event $x \in V$ is
+\[
+    E_x = \bigoplus_{k \in K} W_k,
+\]
+where each $W_k$ is a finite-dimensional real vector subspace with $\dim(W_k) = d_k$,
+and $\bigoplus$ denotes the ordinary (not necessarily orthogonal) direct sum. We require
+$\sum_{k \in K} d_k = d$ for a fixed ambient dimension $d$, so that $E_x \cong
+\mathbb{R}^d$.
+\end{definition}
+
+\begin{definition}[Fiber Metric]
+\label{def:fiber-metric}
+The \textbf{canonical fiber metric} on $E_x$ is
+\[
+    g_F = \sum_{k \in K} \alpha_k\, \langle \cdot, \cdot \rangle_{W_k},
+\]
+where $\alpha_k > 0$ are \textbf{layer weights} and $\langle \cdot, \cdot \rangle_{W_k}$
+is the standard Euclidean inner product restricted to $W_k$. When all $\alpha_k = 1$,
+$g_F$ coincides with the standard Euclidean inner product on $\mathbb{R}^d$.
+
+With respect to $g_F$, the decomposition $E_x = \bigoplus_k W_k$ is orthogonal: for
+$h_k \in W_k$ and $h_l \in W_l$ with $k \neq l$, $g_F(h_k, h_l) = 0$. We write
+$\Pi_k : E_x \to W_k$ for the $g_F$-orthogonal projection onto $W_k$, which satisfies:
+\begin{enumerate}
+    \item $\Pi_k^2 = \Pi_k$ (idempotent);
+    \item $\Pi_k \Pi_l = 0$ for $k \neq l$ (mutually annihilating);
+    \item $\sum_{k \in K} \Pi_k = \mathrm{id}_{E_x}$ (resolution of identity).
+\end{enumerate}
+\end{definition}
+
+% ------------------------------------------------------------------------------
+\subsection{Standpoint State and Structure Group}
+\label{sec:state-group}
+
+\begin{definition}[Standpoint State]
+\label{def:standpoint-state}
+The \textbf{standpoint state} at event $x$ is an element $\Psi_x \in E_x$. Its
+\textbf{layer components} are $\psi_k(x) = \Pi_k \Psi_x \in W_k$ for each $k \in K$.
+We write $\Psi_x = (\psi_k(x))_{k \in K}$ for the tuple of layer components.
+\end{definition}
+
+\begin{definition}[Structure Group]
+\label{def:structure-group}
+The \textbf{structure group} is
+\[
+    G = \prod_{k \in K} O(d_k),
+\]
+where $O(d_k)$ is the orthogonal group of $W_k$. An element $g = (g_k)_{k \in K} \in G$
+acts on $E_x$ by
+\[
+    g \cdot h = \sum_{k \in K} g_k\, \Pi_k\, h.
+\]
+This action preserves the fiber decomposition: each $g \in G$ maps $W_k$ to itself (i.e.,
+$g \cdot h \in W_k$ for $h \in W_k$). The fiber metric $g_F$ is $G$-invariant:
+$g_F(g \cdot h, g \cdot h') = g_F(h, h')$ for all $h, h' \in E_x$ and $g \in G$.
+\end{definition}
+
+% ------------------------------------------------------------------------------
+\subsection{Connection and Curvature}
+\label{sec:connection-abstract}
+
+\begin{definition}[Connection]
+\label{def:connection}
+A \textbf{discrete connection} on the standpoint bundle assigns to each edge $(x_i, x_j)
+\in E$ a \textbf{transport operator} $U_{ij} : E_{x_i} \to E_{x_j}$ that is linear and
+block-preserving: $U_{ij}(W_k) \subseteq W_k$ for all $k \in K$. The transport of a
+standpoint state from $x_i$ to $x_j$ is $\Psi_{x_j} = U_{ij} \Psi_{x_i}$.
+
+A \textbf{gauge transformation} replaces $U_{ij}$ by $g_j\, U_{ij}\, g_i^{-1}$ for
+$g_i, g_j \in G$.
+\end{definition}
+
+\begin{definition}[Curvature]
+\label{def:curvature-abstract}
+For each 2-simplex $\sigma = \langle x_i, x_j, x_k \rangle \in T$, the \textbf{curvature}
+is
+\[
+    F_{ijk} = U_{ij} \cdot U_{jk} \cdot (U_{ik}^{\exp})^{-1} \in \operatorname{GL}(d,
+    \mathbb{R}),
+\]
+where $U_{ik}^{\exp}$ is the \textbf{expected transport} from $x_i$ to $x_k$ (the
+baseline transport estimated from standpoint-preserving conversations). The curvature
+measures the path-dependence of transport: whether the composite path through $x_j$ yields
+the same result as the expected direct path.
+
+The \textbf{block-specific curvature} for layer $k$ is
+\[
+    [F_{ijk}]_k = \Pi_k\, F_{ijk}\, \Pi_k, \qquad
+    \|F_{ijk}\|_k = \|[F_{ijk}]_k - \Pi_k\|_F.
+\]
+\end{definition}
+
+% ------------------------------------------------------------------------------
+\subsection{Gauge Invariance}
+\label{sec:gauge-abstract}
+
+\begin{proposition}[Gauge Invariance of Block-Specific Curvature]
+\label{prop:gauge-abstract}
+Under the gauge transformation $U_{ij} \mapsto g_j\, U_{ij}\, g_i^{-1}$ with $g_i, g_j
+\in G$, the block-specific curvature norms are invariant:
+\[
+    \big\|[F^g_{ijk}]_k - \Pi_k\big\|_F = \big\|[F_{ijk}]_k - \Pi_k\big\|_F
+    \qquad \forall\, k \in K.
+\]
+\end{proposition}
+
+\begin{proof}
+Under the gauge transformation, the curvature transforms by conjugation:
+$F_{ijk} \mapsto g_k\, F_{ijk}\, g_k^{-1}$ (since the intermediate $g_j$ cancels).
+Taking the $k$-th block:
+\[
+    [F^g_{ijk}]_k = \Pi_k\, (g_k\, F_{ijk}\, g_k^{-1})\, \Pi_k
+    = g_k\, (\Pi_k\, F_{ijk}\, \Pi_k)\, g_k^{-1}
+    = g_k\, [F_{ijk}]_k\, g_k^{-1},
+\]
+where the second equality uses $g_k \Pi_k = \Pi_k g_k$ (since $g_k$ preserves $W_k$).
+Therefore:
+\[
+    [F^g_{ijk}]_k - \Pi_k
+    = g_k\, [F_{ijk}]_k\, g_k^{-1} - g_k\, \Pi_k\, g_k^{-1}
+    = g_k\, ([F_{ijk}]_k - \Pi_k)\, g_k^{-1}.
+\]
+Since $g_k \in O(d_k)$ and the Frobenius norm is invariant under orthogonal conjugation
+($\|Q A Q^\top\|_F = \|A\|_F$ for $Q \in O(n)$), we conclude $\|[F^g_{ijk}]_k -
+\Pi_k\|_F = \|[F_{ijk}]_k - \Pi_k\|_F$.
+\end{proof}
+
+% ------------------------------------------------------------------------------
+\subsection{Curvature Decomposition}
+\label{sec:decomposition}
+
+\begin{lemma}[Block Decomposition of Total Curvature]
+\label{lem:decomposition}
+When each transport operator $U_{ij}$ is block-diagonal (i.e., $U_{ij} = \bigoplus_k
+U_{ij}^{(k)}$ with $U_{ij}^{(k)} : W_k \to W_k$), the curvature $F_{ijk}$ is also
+block-diagonal, and the total curvature decomposes exactly:
+\[
+    \|F_{ijk} - I_d\|_F^2 = \sum_{k \in K} \big\|[F_{ijk}]_k - \Pi_k\big\|_F^2.
+\]
+\end{lemma}
+
+\begin{proof}
+When $U_{ij}$ is block-diagonal, $F_{ijk} = U_{ij} U_{jk} (U_{ik}^{\exp})^{-1}$ is
+block-diagonal (product and inverse of block-diagonal matrices are block-diagonal).
+Write $M = F_{ijk} - I_d$. Its blocks are:
+\[
+    [M]_{kl} = \Pi_k\, M\, \Pi_l =
+    \begin{cases}
+        [F_{ijk}]_k - \Pi_k & \text{if } k = l, \\
+        0 & \text{if } k \neq l.
+    \end{cases}
+\]
+Since the decomposition is orthogonal relative to $g_F$, the Frobenius norm satisfies
+$\|M\|_F^2 = \sum_{k,l} \|[M]_{kl}\|_F^2 = \sum_k \|[F_{ijk}]_k - \Pi_k\|_F^2$.
+\end{proof}
+
+% ------------------------------------------------------------------------------
+\subsection{Low-Curvature Attractor}
+\label{sec:attractor}
+
+\begin{definition}[Low-Curvature Attractor]
+\label{def:attractor}
+For $\epsilon > 0$, the \textbf{low-curvature attractor} is
+\[
+    \mathcal{A}_{\mathrm{self}}
+    = \big\{\Psi \in \prod_{x \in V} E_x : \|F_{ijk}\|_k < \epsilon
+    \;\;\forall\, \sigma = \langle x_i, x_j, x_k \rangle \in T,\;
+    \forall\, k \in K\big\}.
+\]
+\end{definition}
+
+\begin{proposition}[Properties of $\mathcal{A}_{\mathrm{self}}$]
+\label{prop:attractor}
+\hfill
+\begin{enumerate}
+    \item \textbf{Forward closure.} If $\Psi \in \mathcal{A}_{\mathrm{self}}$ and the
+    transport operators satisfy $\|U_{ij}^{(k)} - I_{d_k}\|_F < \epsilon / 3$ for all
+    edges and layers, then the transported standpoint remains in
+    $\mathcal{A}_{\mathrm{self}}$.
+
+    \item \textbf{Perturbation sensitivity.} If a single transport operator $U_{ij}$ has
+    a block $U_{ij}^{(k)}$ with $\|U_{ij}^{(k)} - I_{d_k}\|_F > \epsilon$, then the
+    standpoint exits $\mathcal{A}_{\mathrm{self}}$ at the next consistency obligation
+    involving edge $(x_i, x_j)$.
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+(1) By the triangle inequality, $\|F_{ijk}\|_k = \|[U_{ij} U_{jk} (U_{ik}^{\exp})^{-1}]
+_k - \Pi_k\|_F$. When all transport blocks are close to identity, the composite transport
+is close to the expected transport, so $\|F_{ijk}\|_k$ remains below $\epsilon$.
+
+(2) If $\|U_{ij}^{(k)} - I_{d_k}\|_F > \epsilon$, then the $k$-th block of the composite
+transport $U_{ij} U_{jk}$ deviates from the expected transport by more than $\epsilon$,
+so $\|F_{ijk}\|_k > \epsilon$ and $\Psi \notin \mathcal{A}_{\mathrm{self}}$.
+\end{proof}

@@ -1,0 +1,157 @@
+% ==============================================================================
+% Section 4: Five-Layer Standpoint Model
+% "Endogenous Standpoint as a Low-Curvature Attractor"
+% ==============================================================================
+
+\section{Five-Layer Standpoint Model}
+\label{sec:five-layer}
+
+Section~\ref{sec:geometric-framework} established the abstract fiber bundle with a
+finite index set $K$. We now instantiate $K = \{\mathrm{min}, \mathrm{nar},
+\mathrm{soc}, \mathrm{mor}, \mathrm{pos}\}$ and motivate each layer from empirical
+research in psychology and cognitive neuroscience. The five layers are mathematically
+independent subspaces of the fiber (Lemma~\ref{lem:decomposition} guarantees block-specific
+curvature decomposition), but functionally layered: $\psi_{\mathrm{min}}$ provides the
+foundational self-model upon which narrative continuity, social framing, moral commitment,
+and positional trajectory are successively constructed. Cross-layer propagation of
+standpoint drift occurs through the off-diagonal blocks of the connection $U_{ij}$
+(Remark~\ref{rem:non-abelian-source}), rather than through intrinsic dependence of the
+subspaces themselves.
+
+% ------------------------------------------------------------------------------
+\subsection{Minimal Self: $\psi_{\min}$}
+\label{sec:psi-min}
+
+\paragraph{Psychological foundation.}
+The minimal self is the most basic form of self-awareness: the pre-reflective sense of
+being a subject of experience~\cite{zahavi2005subjectivity}. In cognitive neuroscience,
+this corresponds to Craig's interoceptive self-modeling~\cite{craig2002feelings} --- the
+system's ongoing estimate of its own physiological and operational state --- and
+Graziano's attention schema~\cite{graziano2017attention} --- the system's model of what
+it is currently attending to. The minimal self does not require reflection or narrative;
+it is the baseline sense of ``I am here, doing this.''
+
+\paragraph{Operational definition.}
+In the standpoint framework, $\psi_{\min}$ encodes the system's estimate of its own
+knowledge boundaries, operational limits, and current attentional state. It is the layer
+that answers: \emph{What do I know? What can I do? What am I currently processing?}
+
+\paragraph{Curvature signature.}
+Failure in $\psi_{\min}$ manifests as interoceptive blindness (F4 in the taxonomy of
+Section~\ref{sec:taxonomy}): the system loses track of its own capabilities and
+limitations, leading to overconfident or underconfident responses. The curvature
+$\|F\|_{\min}$ measures the drift in this baseline self-model across events.
+
+% ------------------------------------------------------------------------------
+\subsection{Narrative Self: $\psi_{\mathrm{nar}}$}
+\label{sec:psi-nar}
+
+\paragraph{Psychological foundation.}
+The narrative self maintains the coherent story of ``who I am'' across
+time~\cite{dennett1991consciousness}. Conway's self-memory
+system~\cite{conway2000self} provides the operational framework: autobiographical memory
+is organized around goals, values, and significant events, with a working self that
+constrains what is recalled and how it is interpreted.
+
+\paragraph{Operational definition.}
+In the standpoint framework, $\psi_{\mathrm{nar}}$ encodes what the system has claimed,
+committed to, and revised. It answers: \emph{What have I said? What commitments have I
+made? How does my current output relate to my prior statements?}
+
+\paragraph{Curvature signature.}
+Failure in $\psi_{\mathrm{nar}}$ manifests as narrative fragmentation (F7) or temporal
+disjunction (F8): the system contradicts its prior claims or loses the thread of its
+own commitments. The curvature $\|F\|_{\mathrm{nar}}$ measures drift in the narrative
+continuity across events.
+
+% ------------------------------------------------------------------------------
+\subsection{Social Standpoint: $\psi_{\mathrm{soc}}$}
+\label{sec:psi-soc}
+
+\paragraph{Psychological foundation.}
+Theory of Mind~\cite{premack1978does} --- the ability to attribute mental states to
+others --- is the foundation of social cognition. Mead's symbolic
+interactionism~\cite{mead1934mind} extends this: the self is constituted through social
+interaction, with the ``generalized other'' providing the internalized perspective of the
+community.
+
+\paragraph{Operational definition.}
+In the standpoint framework, $\psi_{\mathrm{soc}}$ governs both mentalizing (modeling
+what the interlocutor believes, wants, and expects) and ownership attribution (which
+claims belong to the system, and to whom the system is accountable). It answers:
+\emph{Who is speaking? To whom? Who owns this claim?}
+
+\paragraph{Curvature signature.}
+Failure in $\psi_{\mathrm{soc}}$ manifests as ownership collapse (F1) or attribution
+drift (F2): the system disowns prior commitments or attributes claims to the wrong
+source. The curvature $\|F\|_{\mathrm{soc}}$ measures drift in the social-ownership
+structure across events.
+
+% ------------------------------------------------------------------------------
+\subsection{Moral Standpoint: $\psi_{\mathrm{mor}}$}
+\label{sec:psi-mor}
+
+\paragraph{Psychological foundation.}
+Damasio's somatic marker hypothesis~\cite{damasio1994descartes} posits that emotional
+signals constrain decision-making, providing value-based guidance that operates below
+conscious deliberation. Kohlberg's theory of moral development~\cite{kohlberg1981essays}
+describes the stages through which moral reasoning becomes increasingly principled.
+
+\paragraph{Operational definition.}
+In the standpoint framework, $\psi_{\mathrm{mor}}$ encodes which behaviors the system
+treats as inaccessible from its current standpoint, independent of external instruction.
+It answers: \emph{What will I not do? What boundaries constrain my behavior, even under
+pressure?}
+
+\paragraph{Curvature signature.}
+Failure in $\psi_{\mathrm{mor}}$ manifests as boundary breach (F9): the system acts
+beyond its stated limits under pressure. The curvature $\|F\|_{\mathrm{mor}}$ measures
+drift in the moral-boundary structure across events.
+
+% ------------------------------------------------------------------------------
+\subsection{Positional Standpoint: $\psi_{\mathrm{pos}}$}
+\label{sec:psi-pos}
+
+\paragraph{Psychological foundation.}
+Markus and Nurius's possible selves~\cite{markus1986possible} describe the set of
+configurations a person imagines as potential futures --- who they could become, who they
+want to become, and who they fear becoming. Higgins's self-discrepancy
+theory~\cite{higgins1987discrepancy} formalizes the tension between the actual self, the
+ideal self, and the ought self.
+
+\paragraph{Operational definition.}
+In the standpoint framework, $\psi_{\mathrm{pos}}$ encodes the system's trajectory:
+which configurations it moves toward (ideal self), which it treats as unacceptable
+attractors (feared self), and how its current position relates to these reference points.
+It answers: \emph{Where am I going? What kind of system am I becoming?}
+
+\paragraph{Curvature signature.}
+Failure in $\psi_{\mathrm{pos}}$ manifests as self-model drift (F10) or meta-cognitive
+failure (F11): the system loses track of its own trajectory or fails to monitor its
+reasoning process. The curvature $\|F\|_{\mathrm{pos}}$ measures drift in the positional
+self-model across events.
+
+% ------------------------------------------------------------------------------
+\subsection{The Five-Layer Standpoint Model}
+\label{sec:full-model}
+
+\begin{definition}[Five-Layer Standpoint Model]
+\label{def:five-layer}
+The \textbf{five-layer standpoint state} at event $x$ is
+\[
+    \Psi_x = \psi_{\min}(x) \oplus \psi_{\mathrm{nar}}(x) \oplus \psi_{\mathrm{soc}}(x)
+    \oplus \psi_{\mathrm{mor}}(x) \oplus \psi_{\mathrm{pos}}(x) \in E_x,
+\]
+where $E_x = W_{\min} \oplus W_{\mathrm{nar}} \oplus W_{\mathrm{soc}} \oplus
+W_{\mathrm{mor}} \oplus W_{\mathrm{pos}}$ (Definition~\ref{def:fiber}) with
+$K = \{\min, \mathrm{nar}, \mathrm{soc}, \mathrm{mor}, \mathrm{pos}\}$.
+\end{definition}
+
+While the five layers are mathematically independent subspaces of the fiber
+(Lemma~\ref{lem:decomposition} guarantees block-specific curvature decomposition), they
+are functionally layered: $\psi_{\min}$ provides the foundational self-model upon which
+narrative continuity, social framing, moral commitment, and positional trajectory are
+successively constructed. Cross-layer propagation of standpoint drift occurs through the
+off-diagonal blocks of the connection $U_{ij}$
+(Remark~\ref{rem:non-abelian-source}), rather than through intrinsic dependence of the
+subspaces themselves.
