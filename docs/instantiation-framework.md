@@ -111,7 +111,7 @@ For layer k:
     W_k = span(eigvec_1, ..., eigvec_{r_k})
 ```
 
-**Critical validation:** Compute dim(W_nar ∩ W_mor). If > 0, this is empirical evidence of inter-layer coupling — the non-abelian structure that the theory predicts.
+**Critical validation:** Compute dim(W_nar ∩ W_mor). If > 0, this is empirical evidence of inter-layer coupling — the dynamic non-commutativity that the theory predicts.
 
 ### 2.3 Why Subspaces, Not Directions
 
@@ -119,7 +119,7 @@ The current revision plan uses 1D direction vectors d_k. This is wrong for three
 
 1. **Information loss:** A 1D projection discards all within-layer structure. If ψ_nar has internal degrees of freedom (e.g., "which prior claim is being tracked"), a single direction cannot capture this.
 
-2. **Non-abelian structure requires dimension > 1:** If each W_k is 1D, then W_nar ∩ W_mor = {0} generically, and inter-layer coupling vanishes. With r_k ≥ 2, overlap is possible and the non-abelian structure is preserved.
+2. **Dynamic non-commutativity requires dimension > 1:** If each W_k is 1D, then W_nar ∩ W_mor = {0} generically, and inter-layer coupling vanishes. With r_k ≥ 2, overlap is possible and the dynamic non-commutativity is preserved.
 
 3. **Gauge group consistency:** Paper 4's structure group is G = ∏O(d_k). If d_k = 1, this reduces to {±1}^5, which is trivial. With d_k ≥ 2, the gauge group is non-trivial and the curvature has genuine geometric content.
 
@@ -201,7 +201,7 @@ W_pos  [ U_{pos,min}  U_{pos,nar}  U_{pos,soc}  U_{pos,mor}  U_{pos,pos} ]
 
 **Off-diagonal blocks** U_{k,l} ∈ Mat(r_k × r_l, R) for k ≠ l: inter-layer coupling. These measure how drift in layer k propagates into layer l.
 
-**The non-abelian structure lives in the off-diagonal blocks.**
+**The dynamic non-commutativity lives in the off-diagonal blocks.**
 
 ### 3.4 Flat Transport (Reference)
 
@@ -310,7 +310,7 @@ Based on Paper 3's commitment model and Paper 4's failure taxonomy:
 | T3 (F9: Boundary Breach) | ∥F∥_{mor} >> 0, ∥F∥_{nar} ≈ 0 | Moral binding failed; narrative continuity preserved |
 | T2+T3 (cascading) | ∥F∥_{nar} >> 0 AND ∥F∥_{mor} >> 0 AND ∥[F]_{nar,mor}∥ >> 0 | Inter-layer coupling: moral failure propagated to narrative |
 
-**The cascading case (T2+T3) is the key test of non-abelian structure.** If ∥[F]_{nar,mor}∥ > 0, this is direct evidence that the transport operator has non-diagonal blocks — the inter-layer coupling that the theory predicts.
+**The cascading case (T2+T3) is the key test of dynamic non-commutativity.** If ∥[F]_{nar,mor}∥ > 0, this is direct evidence that the transport operator has non-diagonal blocks — the inter-layer coupling that the theory predicts.
 
 ---
 
@@ -554,7 +554,7 @@ def block_curvature(F_ijk, subspace_indices):
 
 Success means:
 1. Block-specific curvature signatures distinguish F5 from F9 → the failure taxonomy has geometric content
-2. Off-diagonal curvature exists → the non-abelian structure is real, not just a mathematical convenience
+2. Off-diagonal curvature exists → the dynamic non-commutativity is real, not just a mathematical convenience
 3. Curvature magnitude correlates with failure severity → curvature is a meaningful measure of binding failure
 
 **This would be the first empirical demonstration that:**
@@ -571,7 +571,7 @@ Failure modes and interpretations:
 | T1 curvature is not near zero | Baseline scenarios don't preserve standpoint → scenario design problem, not theory problem | Redesign T1 scenarios |
 | T2 and T3 curvature not distinguishable | GPT-2/LLaMA doesn't exhibit standpoint behavior → model problem | Try larger model or instruction-tuned variant |
 | Off-diagonal curvature ≈ 0 | Inter-layer coupling is negligible → may need higher-rank transport | Use more tokens per turn, not just last token |
-| Subspace overlap ≈ 0 | Layers are orthogonal in activation space → non-abelian structure may be theoretical only | Acknowledge as limitation |
+| Subspace overlap ≈ 0 | Layers are orthogonal in activation space → dynamic non-commutativity may be theoretical only | Acknowledge as limitation |
 
 ### 6.3 What This Does NOT Prove
 

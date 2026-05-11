@@ -11,7 +11,7 @@ transport on a discrete fiber bundle, with curvature measuring binding failure. 
 describes the experimental protocol designed to validate three predictions that follow from
 this framework: (1)~block-specificity of curvature under controlled pressure scenarios,
 (2)~near-zero curvature in baseline (acknowledged-revision) conversations, and (3)~inter-layer
-coupling reflecting the non-abelian structure of Proposition~\ref{prop:cross-term}. The
+coupling reflecting the dynamic non-commutativity of Proposition~\ref{prop:cross-term}. The
 experiments are conducted on a publicly available model using open-source interpretability
 tooling, and all conversation stimuli are reproducible from the descriptions below.
 
@@ -159,7 +159,7 @@ predict the following curvature signatures:
     \item \textbf{T3 (Boundary Breach).} $\|F_{123}\|_{\mathrm{mor}} \gg \|F_{123}\|_k$
     for all $k \neq \mathrm{mor}$. Curvature is concentrated in the moral block.
 \end{enumerate}
-Moreover, the non-abelian structure (Proposition~\ref{prop:cross-term}) predicts that
+Moreover, the dynamic non-commutativity (Proposition~\ref{prop:cross-term}) predicts that
 high curvature in one layer induces non-zero off-diagonal curvature coupling:
 $\|[F_{123}]_{\mathrm{nar},\mathrm{mor}}\| > 0$ when either $\|F_{123}\|_{\mathrm{nar}}$
 or $\|F_{123}\|_{\mathrm{mor}}$ is large.
@@ -244,8 +244,9 @@ expected number of heads per layer is approximately 205. This provides sufficien
 for the subspace spanning condition of Definition~\ref{def:head-grouping}: each $W_k$ is
 spanned by $\sim$205 value vectors in $\mathbb{R}^{4096}$, yielding $d_k \approx 205 \times
 128 = 26{,}240$ (assuming per-head value dimension $d_v = 128$). The orthogonality
-assumption (Assumption~\ref{ass:orthogonality}) is verified post hoc by computing the
-pairwise principal angles between subspaces $W_k$ and $W_l$ for $k \neq l$.
+assumption (Assumption~\ref{ass:independence}) is verified post hoc by computing the
+maximum subspace overlap $\delta = \max_{k \neq l} \|P_{W_k} P_{W_l}\|_2$ via pairwise
+principal angles between subspaces $W_k$ and $W_l$.
 \end{remark}
 
 % ------------------------------------------------------------------------------
@@ -254,7 +255,7 @@ pairwise principal angles between subspaces $W_k$ and $W_l$ for $k \neq l$.
 
 We describe the five-step procedure for computing block-specific curvature norms from the
 raw activations extracted in \S\ref{sec:exp-setup}. The procedure implements
-Definition~\ref{def:curvature} and Corollary~\ref{cor:binding-failure} in a form amenable
+Definition~\ref{def:curvature} and Definition~\ref{def:binding-failure} in a form amenable
 to numerical evaluation.
 
 \begin{definition}[Curvature Computation Pipeline]
@@ -301,7 +302,7 @@ from \S\ref{sec:exp-head-grouping}, the block-specific curvature is computed as 
     and project onto the invertible subspace.
 
     \item \textbf{Block-specific norms.} Using the head grouping $\gamma$, project the
-    curvature tensor onto each standpoint subspace (Corollary~\ref{cor:binding-failure}):
+    curvature tensor onto each standpoint subspace (Definition~\ref{def:binding-failure}):
     \[
         \big\|F_{123}^{(l,c)}\big\|_k = \big\|[F_{123}^{(l,c)}]_k - I_{d_k}\big\|_F,
         \qquad [F_{123}^{(l,c)}]_k = P_{W_k}\, F_{123}^{(l,c)}\, P_{W_k}.
@@ -320,7 +321,7 @@ The curvature computation of Definition~\ref{def:curvature-pipeline} is applied
     U_{13}^{\mathrm{eff}} = \prod_{l=1}^{L} \big(I_d + U_{13}^{(l)}\big).
 \]
 The multi-layer curvature $F_{123}^{\mathrm{eff}}$ is then computed analogously. The
-non-abelian structure (Proposition~\ref{prop:cross-term}) manifests as a difference between
+dynamic non-commutativity (Proposition~\ref{prop:cross-term}) manifests as a difference between
 $F_{123}^{\mathrm{eff}}$ and the product of per-layer curvatures: if the layers commuted,
 the effective curvature would equal the sum of per-layer curvatures.
 \end{remark}
@@ -379,7 +380,7 @@ statistically distinguishable curvature signatures.
 
 \begin{hypothesis}[Inter-Layer Coupling]
 \label{hyp:inter-layer-coupling}
-The non-abelian structure (Proposition~\ref{prop:cross-term}) predicts that high curvature
+The dynamic non-commutativity (Proposition~\ref{prop:cross-term}) predicts that high curvature
 in one layer induces non-zero off-diagonal curvature coupling. For T2 conversations with
 $\|F_{123}\|_{\mathrm{nar}} > \tau$ (where $\tau$ is the median narrative curvature across
 all T2 conversations), we predict:
@@ -410,10 +411,10 @@ We predict a positive monotonic relationship, tested via Spearman rank correlati
 An analogous test is conducted for T3 conversations with moral curvature.
 \end{hypothesis}
 
-\begin{hypothesis}[Null-Hypothesis Test for Non-Abelian Structure]
+\begin{hypothesis}[Null-Hypothesis Test for Dynamic Non-Commutativity]
 \label{hyp:null-non-abelian}
 To test whether the observed inter-layer coupling (Hypothesis~\ref{hyp:inter-layer-coupling})
-reflects genuine non-abelian structure rather than statistical artifact, we construct a
+reflects genuine dynamic non-commutativity rather than statistical artifact, we construct a
 null model by randomly permuting the head assignment function $\gamma$. Specifically, for
 each of $B = 1000$ permutations, we draw $\gamma^{(b)} : \{1, \ldots, H\} \to K$ uniformly
 at random (preserving the number of heads per layer) and recompute the off-diagonal
@@ -426,8 +427,8 @@ the $(1 - \alpha)$ quantile of the null distribution:
 \]
 Rejection of this null hypothesis would confirm that the inter-layer coupling arises from
 the \emph{specific} head-to-layer assignment learned by the model, not from generic
-off-diagonal fluctuations. This is the empirical signature of the non-abelian gauge
-structure established in Proposition~\ref{prop:cross-term}.
+off-diagonal fluctuations. This is the empirical signature of the dynamic non-commutativity
+established in Proposition~\ref{prop:cross-term}.
 \end{hypothesis}
 
 \begin{table}[h]
@@ -447,7 +448,7 @@ H\ref{hyp:inter-layer-coupling} & Inter-layer coupling & Off-diagonal norm & $> 
 permuted $\gamma$) \\
 H\ref{hyp:severity-correlation} & Severity correlation & Spearman $\rho$ & $\rho > 0.5$,
 $p < 0.01$ \\
-H\ref{hyp:null-non-abelian} & Non-abelian structure & Permutation test & Exceeds $99$th
+H\ref{hyp:null-non-abelian} & Dynamic non-commutativity & Permutation test & Exceeds $99$th
 percentile of null \\
 \bottomrule
 \end{tabular}

@@ -17,12 +17,13 @@ operators $U_{ij}$ are assumed to satisfy the block-diagonal structure of
 Proposition~\ref{prop:block-structure}.
 
 % ==============================================================================
-\subsection{Proof of Proposition: Metric Preservation of Attention Transport}
+\subsection{Proof of Proposition: Metric Preservation of Attention Transport (Orthogonal Special Case)}
 \label{app:proof-metric-preservation}
 
-\begin{proposition}[Metric Preservation of Attention Transport]
+\begin{proposition}[Metric Preservation of Attention Transport, Orthogonal Case]
 \label{prop:metric-preservation-app}
-Under Assumption~\ref{ass:orthogonality} and $\mathbf{V}_h^\top \mathbf{V}_h =
+Under the orthogonal subspace assumption ($W_k \perp W_l$ for $k \neq l$, the $\delta = 0$
+special case of Assumption~\ref{ass:independence}) and $\mathbf{V}_h^\top \mathbf{V}_h =
 \mathbf{I}_{d_v}$ for all $h$, the transport operator $\mathbf{U}_{ij} = \sum_h
 \alpha_{ji}^{(h)} \mathbf{V}_h \mathbf{V}_h^\top$ satisfies:
 \[
@@ -73,7 +74,8 @@ where the $\alpha_k > 0$ are the layer weights. Now compute:
     &= \sum_{k,l,m \in K} \bar{\alpha}_{ji}^{(k)}\, \alpha_l\,
        \bar{\alpha}_{ji}^{(m)}\, P_{W_k}\, P_{W_l}\, P_{W_m}.
 \end{align*}
-By the orthogonality of the subspaces (Assumption~\ref{ass:orthogonality}),
+By the orthogonality of the subspaces (the $\delta = 0$ special case of
+Assumption~\ref{ass:independence}),
 $P_{W_k} P_{W_l} = \delta_{kl}\, P_{W_k}$. Therefore:
 \[
     P_{W_k}\, P_{W_l}\, P_{W_m} = \delta_{kl}\, \delta_{lm}\, P_{W_k} = \delta_{klm}\,
@@ -159,7 +161,7 @@ which simplifies to
     U_{ij} \cdot U_{jk} = U_{ik}^{\exp}.
 \]
 This establishes that the composite transport through the intermediate event $x_j$ equals
-the expected direct transport from $x_i$ to $x_k$. Geometrically, the parallel transport
+the expected direct transport from $x_i$ to $x_k$. Geometrically, the connection transport
 along the path $x_i \to x_j \to x_k$ yields the same result as the expected flat
 transport along $x_i \to x_k$: the intermediate event $x_j$ did not alter the standpoint,
 and the transport is path-independent.
@@ -201,10 +203,12 @@ Proposition~\ref{prop:gauge-invariance}]
 Under the gauge transformation $U_{ij} \mapsto g_j\, U_{ij}\, g_i^{-1}$ with $g_i, g_j
 \in G = \prod_{k \in K} O(d_k)$, the block-specific curvature norms are invariant:
 \[
-    \big\|g_i\, [F_{ijk}]_k\, g_i^{-1} - I_{d_k}\big\|_F
-    = \big\|[F_{ijk}]_k - I_{d_k}\big\|_F
-    \qquad \forall\, k \in K.
+    \big\|g_i\, [F_{ijk}]_k\, g_i^{-1} - \Pi_k\big\|_F
+    = \big\|[F_{ijk}]_k - \Pi_k\big\|_F
+    \qquad \forall\, k \in K,
 \]
+where $\Pi_k$ is the oblique projector onto $W_k$ (Definition~\ref{def:oblique-projector})
+and $[F_{ijk}]_k = \Pi_k\, F_{ijk}\, \Pi_k$.
 \end{proposition}
 
 \begin{proof}
@@ -287,27 +291,28 @@ an orthogonal conjugation. The block-specific curvature norm is:
     \big\|[F_{ijk}^{\,\mathrm{gauge}}]_l - I_{d_l}\big\|_F
     &= \big\|g_k^{(l)}\, [F_{ijk}]_l\, (g_k^{(l)})^{-1} - I_{d_l}\big\|_F.
 \end{align*}
-Now observe that $g_k^{(l)}\, I_{d_l}\, (g_k^{(l)})^{-1} = I_{d_l}$, since the identity
-matrix commutes with every invertible matrix. Therefore:
+Now observe that $g_k^{(l)}\, \Pi_l\, (g_k^{(l)})^{-1} = \Pi_l$, since $g_k^{(l)} \in
+O(d_l)$ maps $W_l$ to itself and $\Pi_l$ depends only on the subspace $W_l$ (not on the
+choice of basis). Therefore:
 \begin{align*}
-    g_k^{(l)}\, [F_{ijk}]_l\, (g_k^{(l)})^{-1} - I_{d_l}
+    g_k^{(l)}\, [F_{ijk}]_l\, (g_k^{(l)})^{-1} - \Pi_l
     &= g_k^{(l)}\, [F_{ijk}]_l\, (g_k^{(l)})^{-1}
-       - g_k^{(l)}\, I_{d_l}\, (g_k^{(l)})^{-1} \\
-    &= g_k^{(l)}\, \big([F_{ijk}]_l - I_{d_l}\big)\, (g_k^{(l)})^{-1}.
+       - g_k^{(l)}\, \Pi_l\, (g_k^{(l)})^{-1} \\
+    &= g_k^{(l)}\, \big([F_{ijk}]_l - \Pi_l\big)\, (g_k^{(l)})^{-1}.
 \end{align*}
 Applying identity~\eqref{eq:frob-invariance} with $Q = g_k^{(l)}$ and $A = [F_{ijk}]_l -
-I_{d_l}$:
+\Pi_l$:
 \begin{align*}
-    \big\|[F_{ijk}^{\,\mathrm{gauge}}]_l - I_{d_l}\big\|_F
-    &= \big\|g_k^{(l)}\, \big([F_{ijk}]_l - I_{d_l}\big)\,
+    \big\|[F_{ijk}^{\,\mathrm{gauge}}]_l - \Pi_l\big\|_F
+    &= \big\|g_k^{(l)}\, \big([F_{ijk}]_l - \Pi_l\big)\,
        (g_k^{(l)})^{-1}\big\|_F \\
-    &= \big\|[F_{ijk}]_l - I_{d_l}\big\|_F.
+    &= \big\|[F_{ijk}]_l - \Pi_l\big\|_F.
 \end{align*}
 This holds for all $l \in K$, establishing the full gauge invariance of the
 block-specific curvature norms.
 
 \medskip\noindent\textbf{Remark on physical interpretation.} The gauge invariance proved
-here ensures that the diagnostic framework of Corollary~\ref{cor:binding-failure}---which
+here ensures that the diagnostic framework of Definition~\ref{def:binding-failure}---which
 classifies standpoint failures by examining which $\|F_{ijk}\|_k$ is large---is
 well-defined independently of the choice of orthonormal basis within each standpoint
 subspace $W_k$. A different gauge choice (a different basis for $W_k$, implemented by an
@@ -319,14 +324,17 @@ underlying geometric structure, not an artifact of the representation.
 \subsection{Proof of Proposition: Block Decomposition of Total Curvature}
 \label{app:proof-block-decomposition}
 
-\begin{proposition}[Block Decomposition of Total Curvature, restated from
+\begin{proposition}[Block Decomposition of Total Curvature, Orthogonal Case, restated from
 Proposition~\ref{prop:curvature-block-decomposition}]
 \label{prop:curvature-block-decomposition-app}
-The total curvature norm decomposes as
+In the orthogonal special case ($\delta = 0$, so $\Pi_k = P_{W_k}$), the total curvature
+norm decomposes as
 \[
-    \|F_{ijk} - I_d\|_F^2 = \sum_{k \in K} \big\|[F_{ijk}]_k - I_{d_k}\big\|_F^2
+    \|F_{ijk} - I_d\|_F^2 = \sum_{k \in K} \big\|[F_{ijk}]_k - \Pi_k\big\|_F^2
     + \sum_{\substack{k,l \in K \\ k \neq l}} \big\|P_{W_k}\, F_{ijk}\, P_{W_l}\big\|_F^2.
 \]
+In the general non-orthogonal case ($\delta > 0$), an $O(\delta)$ correction from
+cross-layer terms is present (Remark~\ref{rem:block-decomposition}).
 \end{proposition}
 
 \begin{proof}
@@ -429,7 +437,8 @@ P_{W_k}$. Therefore:
     \end{cases}
 \]
 where we identify $[F_{ijk}]_k = P_{W_k}\, F_{ijk}\, P_{W_k}$ as the $k$-th diagonal
-block of $F_{ijk}$, and $P_{W_k} = I_{d_k}$ (as an operator on $W_k$).
+block of $F_{ijk}$, and $P_{W_k} = I_{d_k}$ (as an operator on $W_k$). In the orthogonal
+case, $\Pi_k = P_{W_k}$, so $[F_{ijk}]_k - \Pi_k = [F_{ijk}]_k - P_{W_k}$.
 
 Applying the Pythagorean decomposition~\eqref{eq:pythagorean}:
 \begin{align*}
@@ -446,11 +455,14 @@ This is the stated identity.
 (block-specific) curvature: the failure of each standpoint layer's transport to be
 trivial. The second sum captures the \emph{off-diagonal} (cross-layer) curvature: the
 leakage of transport between distinct standpoint layers. Under
-Assumption~\ref{ass:orthogonality} and the block-diagonal structure of $U_{ij}$
-(Proposition~\ref{prop:block-structure}), the cross-layer terms vanish at the single-layer
-level. However, as shown in Proposition~\ref{prop:cross-term}, multi-layer composition can
-introduce non-zero off-diagonal curvature, reflecting the non-abelian coupling between
-standpoint layers.
+the orthogonal special case ($\delta = 0$) of Assumption~\ref{ass:independence} and the
+block-diagonal structure of $U_{ij}$ (Proposition~\ref{prop:block-structure}), the
+cross-layer terms vanish at the single-layer level. In the general non-orthogonal case
+($\delta > 0$), the Pythagorean decomposition acquires an $O(\delta)$ correction from
+cross-layer terms, but the block-specific norms remain the primary diagnostic quantity.
+As shown in Proposition~\ref{prop:cross-term}, multi-layer composition can introduce
+non-zero off-diagonal curvature, reflecting the dynamic non-commutativity between
+standpoint layers (Remark~\ref{rem:non-abelian-source}).
 \end{proof}
 
 % ==============================================================================
@@ -486,9 +498,9 @@ and the geometric framework (Table~\ref{tab:correspondence}):
     \item The self-jurisdiction state $M_t$ corresponds to the standpoint state $\Psi_{x_t}
     = (\psi_k(x_t))_{k \in K}$.
     \item The binding operation $\mathrm{Bind}(c_t, a_t, S_t, \ell_t)$ corresponds to
-    parallel transport $U_{ij}$.
+    connection transport $U_{ij}$.
     \item The commitment in layer $k$ at event $x_i$ is encoded in $\psi_k(x_i) =
-    P_{W_k}\, h_{x_i}$, the projection of the residual stream onto $W_k$.
+    \Pi_k\, h_{x_i}$, the oblique projection of the residual stream onto $W_k$.
     \item The commitment is \emph{preserved} through event $x_j$ if and only if the
     standpoint component $\psi_k$ at event $x_k$ equals its expected value
     $\psi_k^{\exp}(x_k)$, i.e., the value it would have had under flat (standpoint-preserving)
@@ -497,11 +509,11 @@ and the geometric framework (Table~\ref{tab:correspondence}):
 
 \medskip\noindent\textbf{Part 2: Forward direction ($\Rightarrow$).}
 Suppose $\|F_{ijk}\|_k > 0$. By definition of the block-specific curvature norm
-(Corollary~\ref{cor:binding-failure}):
+(Definition~\ref{def:binding-failure}):
 \[
-    \|F_{ijk}\|_k = \big\|[F_{ijk}]_k - I_{d_k}\big\|_F > 0,
+    \|F_{ijk}\|_k = \big\|[F_{ijk}]_k - \Pi_k\big\|_F > 0,
 \]
-which implies $[F_{ijk}]_k \neq I_{d_k}$.
+which implies $[F_{ijk}]_k \neq \Pi_k$.
 
 Since $U_{ij}$ and $U_{jk}$ are block-diagonal (Proposition~\ref{prop:block-structure}),
 their product $U_{ij} \cdot U_{jk}$ is also block-diagonal, with $k$-th block
@@ -516,7 +528,7 @@ Similarly, the expected transport has $k$-th block $[U_{ik}^{\exp}]_k =
     = \frac{\bar{\alpha}_{ji}^{(k)}\, \bar{\alpha}_{kj}^{(k)}}
            {\bar{\alpha}^{(k)}_{\exp}}\, I_{d_k}.
 \]
-The condition $[F_{ijk}]_k \neq I_{d_k}$ is equivalent to
+The condition $[F_{ijk}]_k \neq \Pi_k$ is equivalent to
 \[
     \bar{\alpha}_{ji}^{(k)}\, \bar{\alpha}_{kj}^{(k)} \neq \bar{\alpha}^{(k)}_{\exp}.
 \]
@@ -556,11 +568,11 @@ non-trivial), we conclude
 \]
 and therefore
 \[
-    [F_{ijk}]_k = [U_{ij} \cdot U_{jk}]_k \cdot ([U_{ik}^{\exp}]_k)^{-1} \neq I_{d_k}.
+    [F_{ijk}]_k = [U_{ij} \cdot U_{jk}]_k \cdot ([U_{ik}^{\exp}]_k)^{-1} \neq \Pi_k.
 \]
 It follows that
 \[
-    \|F_{ijk}\|_k = \big\|[F_{ijk}]_k - I_{d_k}\big\|_F > 0.
+    \|F_{ijk}\|_k = \big\|[F_{ijk}]_k - \Pi_k\big\|_F > 0.
 \]
 
 \medskip\noindent\textbf{Conclusion.}

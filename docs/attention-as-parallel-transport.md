@@ -5,7 +5,7 @@
 **Author:** Zhangze Foo
 **Date:** 2026-05-10
 **Status:** Core theoretical framework
-**Purpose:** Prove that a transformer's attention mechanism IS parallel transport on a discrete fiber bundle, and that curvature — defined as the path-dependence of this transport — measures standpoint drift (Paper 4) / binding failure (Paper 3).
+**Purpose:** Prove that a transformer's attention mechanism defines a discrete connection on a fiber bundle, and that curvature — defined as the inter-layer inconsistency and path-dependence of this transport — measures standpoint drift (Paper 4) / binding failure (Paper 3).
 
 ---
 
@@ -13,7 +13,7 @@
 
 **Claim.** A transformer's attention mechanism defines a discrete connection on a fiber bundle over the event-sequence space. The curvature of this connection — measured by the failure of two attention paths to agree — is the geometric quantity that Paper 4 calls standpoint drift and Paper 3 calls binding failure.
 
-This is not an analogy. It is a mathematical identity.
+**Theorem (Attention as Fiber Bundle Connection).** Under the assumptions of subspace independence (Assumption 1), value matrix normalization ($V_h^\top V_h = I_{d_v}$), and turn-level granularity, transformer attention defines a discrete connection on the standpoint fiber bundle. The curvature $F_{ijk} = U_{ij} \cdot U_{jk} \cdot (U_{ik}^{\exp})^{-1}$ measures the inter-layer inconsistency and path-dependence of transport.
 
 ---
 
@@ -39,7 +39,7 @@ This is the same as Paper 4's Definition 1. No change.
   - V_h ∈ R^{d × d_v}: the value matrix of head h.
   - W_k = span(⋃_{h ∈ H_k} range(V_h)) ⊂ R^d: the subspace spanned by layer k's value matrices.
 
-**Assumption (Orthogonality).** For k ≠ l, W_k ⊥ W_l. That is, the value subspaces of different standpoint layers are orthogonal in the residual stream.
+**Assumption (Subspace Independence).** The subspaces $\{W_k\}$ are independent: $W_k \cap \operatorname{span}(\bigcup_{l \neq k} W_l) = \{0\}$ for all $k$, and $\sum_k d_k = d$. Orthogonality ($W_k \perp W_l$) is a sufficient but not necessary condition; the degree of non-orthogonality is measured by $\delta = \max_{k \neq l} \|P_{W_k} P_{W_l}\|_2$.
 
 **Fiber.** The fiber at event x_i is:
 
@@ -47,13 +47,13 @@ This is the same as Paper 4's Definition 1. No change.
 E_{x_i} = R^d = W_min ⊕ W_nar ⊕ W_soc ⊕ W_mor ⊕ W_pos
 ```
 
-This is a direct sum decomposition (guaranteed by the orthogonality assumption). The standpoint state at event x_i is:
+This is a direct sum decomposition (guaranteed by the subspace independence assumption). The standpoint state at event x_i is:
 
 ```
 Ψ_{x_i} = (ψ_min(x_i), ψ_nar(x_i), ψ_soc(x_i), ψ_mor(x_i), ψ_pos(x_i))
 ```
 
-where ψ_k(x_i) = P_{W_k} h_{x_i} is the projection of the residual stream onto W_k, and h_{x_i} ∈ R^d is the residual stream at the last token of event x_i.
+where ψ_k(x_i) = Π_k h_{x_i} is the oblique projection of the residual stream onto W_k (using the oblique projector Π_k, which equals the orthogonal projector P_{W_k} when subspaces are orthogonal), and h_{x_i} ∈ R^d is the residual stream at the last token of event x_i.
 
 **Total dimension:** d = d_min + d_nar + d_soc + d_mor + d_pos, where d_k = dim(W_k) = |H_k| × d_v.
 
@@ -69,10 +69,10 @@ G = O(W_min) × O(W_nar) × O(W_soc) × O(W_mor) × O(W_pos)
 An element g = (g_min, g_nar, g_soc, g_mor, g_pos) ∈ G acts on the fiber R^d by applying g_k to each subspace W_k independently:
 
 ```
-g · h = Σ_k g_k P_{W_k} h
+g · h = Σ_k g_k Π_k h
 ```
 
-This is a block-orthogonal transformation. It preserves the fiber metric (Definition 4') and the direct sum decomposition.
+This is a block-orthogonal transformation (using oblique projectors Π_k). It preserves the fiber metric (Definition 4') and the direct sum decomposition. The structure group G is abelian: each block O(d_k) acts independently on W_k, and distinct blocks commute.
 
 **Gauge transformation.** For transport operators U_{ij}, a gauge transformation is:
 
@@ -184,7 +184,7 @@ U_{ij} = [α_{ji}^{(min)} I_{d_min}    0                ...    0            ]
 
 **This is diagonal** (no off-diagonal blocks) because the orthogonality assumption ensures that each head belongs to exactly one layer, and transport within a layer does not cross into other layers.
 
-**Key observation:** The non-abelian structure does NOT come from off-diagonal blocks of U_{ij}. It comes from the **path-dependence** of U_{ij} · U_{jk} vs. U_{ik}. This is the crucial point that resolves the confusion in previous versions of the framework.
+**Key observation:** The dynamic non-commutativity does NOT come from off-diagonal blocks of U_{ij}. It comes from the **path-dependence** of U_{ij} · U_{jk} vs. U_{ik}. This is the crucial point that resolves the confusion in previous versions of the framework.
 
 ---
 
@@ -272,7 +272,7 @@ This is the restriction of the curvature tensor to the subspace W_k.
 
 ### 3.4 When Are Off-Diagonal Curvature Blocks Non-Zero?
 
-**This is the key question for non-abelian structure.**
+**This is the key question for dynamic non-commutativity.**
 
 Under the orthogonality assumption, U_{ij} is diagonal (Section 2.3). Therefore:
 
@@ -282,13 +282,13 @@ U_{ij} · U_{jk} = diag(α_{ji}^{(k)} α_{kj}^{(k)})_k
 
 This is also diagonal. So F_{ijk} = U_{ij} · U_{jk} is diagonal, and all off-diagonal blocks are zero.
 
-**This seems to kill the non-abelian structure.** But it doesn't — because the above analysis assumes transport happens in a single attention layer. In a real transformer, there are multiple attention layers stacked, and the residual stream accumulates contributions from all layers:
+**This seems to kill the dynamic non-commutativity.** But it doesn't — because the above analysis assumes transport happens in a single attention layer. In a real transformer, there are multiple attention layers stacked, and the residual stream accumulates contributions from all layers:
 
 ```
 h_{out} = h_{in} + Σ_{layer=1}^{L} attn_layer(h_{in})
 ```
 
-**The non-abelian structure arises from the stacking of attention layers.**
+**The dynamic non-commutativity arises from the stacking of attention layers.**
 
 Consider two attention layers, A and B. Layer A's heads encode ψ_nar, layer B's heads encode ψ_mor. The transport through both layers is:
 
@@ -304,7 +304,7 @@ U_{ij}^B U_{ij}^A maps W_nar → W_nar + W_mor
 
 because layer B (encoding ψ_mor) can attend to and transform the ψ_nar information that layer A produced.
 
-**This is the non-abelian structure.** It arises from the composition of attention layers, not from individual heads.
+**This is the dynamic non-commutativity.** It arises from the composition of attention layers, not from individual heads.
 
 **Definition.** The *effective transport* through L attention layers is:
 
@@ -478,15 +478,17 @@ Step 6: Validate Predictions
 
 ### 8.1 The Mathematical Identity
 
-This framework establishes a mathematical identity:
+This framework establishes a mathematical result:
 
-> **Transformer attention = parallel transport on a discrete fiber bundle**
+> **Transformer attention defines a discrete connection on a fiber bundle over the event-sequence space.**
 
-This is not an analogy, not a metaphor, not a loose correspondence. The attention mechanism, as implemented in every transformer-based model, literally computes parallel transport on a fiber bundle whose:
+Under the assumptions of subspace independence, value matrix normalization, and turn-level granularity, the attention mechanism computes a connection on a fiber bundle whose:
 - Base space is the event sequence
 - Fiber is the residual stream
 - Connection is defined by attention weights
-- Curvature measures path-dependence
+- Curvature measures the inter-layer inconsistency and path-dependence of transport
+
+The connection is not necessarily metric-compatible: different standpoint layers may be transported at different rates. The curvature captures this differential transport, not merely deviation from identity.
 
 ### 8.2 The Architectural Innovation
 
@@ -510,7 +512,7 @@ Every deployed LLM already has a standpoint — it's the geometric structure of 
 
 ### 9.1 Multi-Layer Composition
 
-The effective transport U_{ij}^{eff} = Π_l (I + U_{ij}^{(l)}) involves composition across attention layers. The off-diagonal blocks of this product need explicit computation for the non-abelian structure to be empirically testable.
+The effective transport U_{ij}^{eff} = Π_l (I + U_{ij}^{(l)}) involves composition across attention layers. The off-diagonal blocks of this product need explicit computation for the dynamic non-commutativity to be empirically testable.
 
 ### 9.2 Head Grouping Validation
 
@@ -518,11 +520,11 @@ The head grouping function γ is assumed, not derived. Empirical validation (Sec
 
 ### 9.3 Orthogonality Assumption
 
-The assumption W_k ⊥ W_l is strong. In practice, head value subspaces may overlap. The framework needs a relaxation: approximate orthogonality, with a quantified error bound.
+The orthogonality assumption W_k ⊥ W_l has been relaxed to subspace independence, with the degree of non-orthogonality measured by δ = max_{k≠l} ‖P_{W_k} P_{W_l}‖₂. Oblique projectors Π_k replace orthogonal projectors P_{W_k} for block extraction, and an O(δ) error bound quantifies the approximation. The framework is now self-contained: orthogonality is a sufficient condition (δ = 0), not a necessary one.
 
 ### 9.4 Beyond Transformers
 
-The framework is stated for transformers, but the core idea — attention as parallel transport — may generalize to any architecture with attention-like mechanisms (state space models, linear attention, etc.).
+The framework is stated for transformers, but the core idea — attention as discrete connection — may generalize to any architecture with attention-like mechanisms (state space models, linear attention, etc.).
 
 ---
 
@@ -534,7 +536,7 @@ The complete mathematical instantiation:
 2. **Transport:** U_{ij} = Σ_h α_{ji}^{(h)} V_h V_h^T, the attention-weighted projection.
 3. **Curvature:** F_{ijk} = U_{ij} · U_{jk} · (U_{ik}^{exp})^{-1}, the path-dependence of attention transport.
 4. **Gauge invariance:** Block-specific curvature norms are invariant under G = ∏_k O(d_k) (Proposition 1').
-5. **Non-abelian structure:** Arises from the composition of attention layers, not from subspace overlap.
+5. **Non-commutativity:** Arises from the dynamic dependence of layer l+1's attention weights on layer l's output (not from the gauge group, which is abelian).
 6. **Binding failure:** ∥F_{ijk}∥_k > 0 iff the commitment in layer k was not preserved through event x_j.
 
-**Core claim:** Transformer attention IS parallel transport. Curvature IS standpoint drift. The low-curvature region IS functional selfhood.
+**Core claim:** Transformer attention defines a discrete connection on a fiber bundle. Curvature measures inter-layer inconsistency and standpoint drift. The low-curvature region is the functional selfhood attractor.

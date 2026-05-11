@@ -3,13 +3,16 @@
 % "Endogenous Standpoint as a Low-Curvature Attractor"
 % ==============================================================================
 
-\section{Mathematical Instantiation: Transformer Attention as Parallel Transport}
+\section{Mathematical Instantiation: Transformer Attention as Discrete Connection}
 \label{sec:instantiation}
 
-This section establishes the central mathematical identity of the paper: a transformer's
-attention mechanism \emph{is} parallel transport on a discrete fiber bundle, and its curvature
-\emph{is} the path-dependence that measures standpoint drift~\cite{LCESA} and binding
-failure~\cite{self-jurisdiction}. We proceed by instantiating each component of the abstract
+This section establishes the central mathematical result of the paper: a transformer's
+attention mechanism defines a discrete connection on a fiber bundle over the event-sequence
+space, and its curvature \emph{is} the path-dependence that measures standpoint
+drift~\cite{LCESA} and binding failure~\cite{self-jurisdiction}. Unlike classical parallel
+transport, this connection is not necessarily metric-compatible; the curvature measures the
+\emph{differential} transport across standpoint layers, which is the geometrically
+meaningful quantity. We proceed by instantiating each component of the abstract
 fiber bundle framework (Definitions~1--8 of~\cite{LCESA}) in terms of concrete transformer
 architectural objects: residual streams, attention heads, value matrices, and attention
 weights.
@@ -80,39 +83,72 @@ Each head $h$ has an associated value matrix $V_h \in \mathbb{R}^{d \times d_v}$
 \]
 \end{definition}
 
-\begin{assumption}[Orthogonality of Standpoint Subspaces]
-\label{ass:orthogonality}
-For all $k \neq l$ in $K$, we have $W_k \perp W_l$. That is, the value subspaces of
-distinct standpoint layers are mutually orthogonal in the residual stream:
-\[
-    \langle v, w \rangle = 0 \quad \forall\, v \in W_k,\; w \in W_l,\; k \neq l.
-\]
-This orthogonality is a consequence of the architectural independence of attention heads:
-each head $h$ produces values in $\operatorname{range}(V_h)$, and we assume that the
-training process has induced a decomposition in which heads assigned to different
-standpoint layers operate on complementary subspaces.
+\begin{assumption}[Subspace Independence]
+\label{ass:independence}
+The standpoint subspaces $\{W_k\}_{k \in K}$ are \textbf{independent}: the sum
+$\sum_k W_k$ is direct (i.e., $W_k \cap \operatorname{span}(\bigcup_{l \neq k} W_l)
+= \{0\}$ for all $k$), and $\sum_{k \in K} d_k = d$, so that
+$\mathbb{R}^d = \bigoplus_k W_k$.
 \end{assumption}
+
+\begin{remark}[Orthogonality as an Empirical Condition]
+\label{rem:orthogonality}
+Assumption~\ref{ass:independence} does \emph{not} require the subspaces to be mutually
+orthogonal. Orthogonality ($W_k \perp W_l$ for $k \neq l$) is a sufficient condition for
+independence, but not a necessary one. In practice, the degree of orthogonality is an
+empirical quantity that can be measured via the maximum principal angle:
+\[
+    \delta = \max_{k \neq l}\, \sin\theta_{\max}(W_k, W_l)
+    = \max_{k \neq l}\, \|P_{W_k} P_{W_l}\|_2.
+\]
+When $\delta = 0$, the subspaces are orthogonal and the classical framework applies
+exactly. When $\delta > 0$ but small, the oblique projector framework
+(Definition~\ref{def:oblique-projector}) provides an exact treatment, and all results
+hold with the appropriate projectors. The quantity $\delta$ is experimentally measurable
+from the trained model's value matrices.
+\end{remark}
+
+\begin{definition}[Oblique Projector]
+\label{def:oblique-projector}
+For the independent subspaces $\{W_k\}_{k \in K}$ of Assumption~\ref{ass:independence},
+define the \textbf{oblique projector} $\Pi_k : \mathbb{R}^d \to W_k$ by
+\[
+    \Pi_k = W_k\, (Z_k^\top W_k)^{-1}\, Z_k^\top,
+\]
+where $W_k \in \mathbb{R}^{d \times d_k}$ is a basis matrix for $W_k$ and $Z_k \in
+\mathbb{R}^{d \times d_k}$ is a basis matrix for $(\operatorname{span}(\bigcup_{l \neq k}
+W_l))^\perp$. The oblique projector satisfies:
+\begin{enumerate}
+    \item $\Pi_k^2 = \Pi_k$ (idempotent),
+    \item $\operatorname{range}(\Pi_k) = W_k$,
+    \item $\Pi_k\, \Pi_l = 0$ for $k \neq l$ (mutually annihilating),
+    \item $\sum_{k \in K} \Pi_k = I_d$ (resolution of identity).
+\end{enumerate}
+When the subspaces are orthogonal, $\Pi_k = P_{W_k}$ (the orthogonal projector), so this
+framework subsumes the orthogonal case.
+\end{definition}
 
 \begin{proposition}[Fiber Decomposition]
 \label{prop:fiber-decomposition}
-Under Assumption~\ref{ass:orthogonality}, the residual stream admits the orthogonal
-direct sum decomposition
+Under Assumption~\ref{ass:independence}, the residual stream admits the direct sum
+decomposition
 \[
     \mathbb{R}^d = W_{\mathrm{min}} \oplus W_{\mathrm{nar}} \oplus W_{\mathrm{soc}}
     \oplus W_{\mathrm{mor}} \oplus W_{\mathrm{pos}},
 \]
 with $\sum_{k \in K} d_k = d$, where $d_k = \dim(W_k) = |H_k| \cdot d_v$. The fiber at
-event $x_i$ is $E_{x_i} = \mathbb{R}^d$ equipped with this decomposition.
+event $x_i$ is $E_{x_i} = \mathbb{R}^d$ equipped with this decomposition and the oblique
+projectors $\{\Pi_k\}_{k \in K}$ of Definition~\ref{def:oblique-projector}.
 \end{proposition}
 
 \begin{proof}
-Since $\{W_k\}_{k \in K}$ are pairwise orthogonal subspaces of $\mathbb{R}^d$ by
-Assumption~\ref{ass:orthogonality}, their sum $\sum_k W_k$ is direct. It remains to show
-that $\bigoplus_k W_k = \mathbb{R}^d$. By construction, every attention head $h \in
-\{1,\ldots,H\}$ belongs to exactly one $H_k$, and $\bigcup_h \operatorname{range}(V_h)$
-spans $\mathbb{R}^d$ (the output projection matrix $W_O$ is full rank in standard
-transformer architectures, so the concatenated head outputs span the full residual
-stream). Therefore $\bigoplus_k W_k = \mathbb{R}^d$.
+By Assumption~\ref{ass:independence}, the subspaces are independent and
+$\sum_k d_k = d$, so the sum is direct and fills $\mathbb{R}^d$. By construction,
+every attention head $h \in \{1,\ldots,H\}$ belongs to exactly one $H_k$, and
+$\bigcup_h \operatorname{range}(V_h)$ spans $\mathbb{R}^d$ (the output projection matrix
+$W_O$ is full rank in standard transformer architectures). Therefore $\bigoplus_k W_k =
+\mathbb{R}^d$. The resolution of identity $\sum_k \Pi_k = I_d$ follows from
+Definition~\ref{def:oblique-projector}.
 \end{proof}
 
 \begin{definition}[Standpoint State]
@@ -123,9 +159,8 @@ The \textbf{standpoint state} at event $x_i$ is the tuple
     \psi_{\mathrm{soc}}(x_i),\; \psi_{\mathrm{mor}}(x_i),\; \psi_{\mathrm{pos}}(x_i)\big)
     \in \bigoplus_{k \in K} W_k,
 \]
-where $\psi_k(x_i) = P_{W_k}\, h_{x_i}$ is the orthogonal projection of the residual
-stream $h_{x_i} \in \mathbb{R}^d$ at the final token of turn $x_i$ onto the subspace
-$W_k$, and $P_{W_k}$ denotes the orthogonal projector onto $W_k$.
+where $\psi_k(x_i) = \Pi_k\, h_{x_i}$ is the oblique projection of the residual stream
+$h_{x_i} \in \mathbb{R}^d$ at the final token of turn $x_i$ onto the subspace $W_k$.
 \end{definition}
 
 \begin{definition}[Structure Group, {\cite[Def.~3]{LCESA}}]
@@ -140,7 +175,7 @@ The \textbf{structure group} of the fiber bundle is
 An element $g = (g_{\mathrm{min}}, g_{\mathrm{nar}}, g_{\mathrm{soc}}, g_{\mathrm{mor}},
 g_{\mathrm{pos}}) \in G$ acts on the fiber $\mathbb{R}^d$ by
 \[
-    g \cdot h = \sum_{k \in K} g_k\, P_{W_k}\, h,
+    g \cdot h = \sum_{k \in K} g_k\, \Pi_k\, h,
 \]
 applying an independent orthogonal transformation within each standpoint subspace. A
 \textbf{gauge transformation} of the transport operators is
@@ -161,17 +196,24 @@ The \textbf{canonical fiber metric} on $E_{x_i} = \mathbb{R}^d$ is
 \]
 where $\alpha_k > 0$ are layer weights. For the present instantiation we take $\alpha_k
 = 1$ for all $k$ (the standard Euclidean metric). The resulting inner product is
-$\langle h, h' \rangle_F = \sum_{k \in K} \langle P_{W_k} h,\, P_{W_k} h' \rangle$.
+$\langle h, h' \rangle_F = \sum_{k \in K} \langle \Pi_k h,\, \Pi_k h' \rangle$, where
+$\Pi_k$ are the oblique projectors of Definition~\ref{def:oblique-projector}. When the
+subspaces are orthogonal, $\Pi_k = P_{W_k}$ and this reduces to the standard Euclidean
+inner product.
 \end{definition}
 
 % ------------------------------------------------------------------------------
 \subsection{Transport from Attention}
 \label{sec:transport}
 
-We now construct the connection on the fiber bundle. The connection is the rule for
-parallel transport: given the standpoint state at event $x_i$, how should it be carried
-to event $x_j$? We show that the transformer's attention mechanism provides exactly this
-rule.
+We now construct the connection on the fiber bundle. A connection is a rule for
+transporting fiber elements along the base space: given the standpoint state at event
+$x_i$, how should it be carried to event $x_j$? We show that the transformer's attention
+mechanism defines such a connection. Unlike the classical setting of parallel transport on
+Riemannian manifolds, this connection is not necessarily metric-compatible
+(Remark~\ref{rem:metric-preservation}): attention can differentially amplify or attenuate
+different standpoint layers. The curvature of this connection, defined in
+\S\ref{sec:curvature}, measures the inconsistency of transport across layers.
 
 \begin{definition}[Attention Transport Operator, {\cite[Def.~6]{LCESA}}]
 \label{def:transport-operator}
@@ -192,58 +234,88 @@ where:
 
 \begin{proposition}[Block Structure of $U_{ij}$]
 \label{prop:block-structure}
-Under Assumption~\ref{ass:orthogonality} and the assumption that $\{V_h : h \in H_k\}$
-form an orthonormal set spanning $W_k$ for each $k$, the transport operator decomposes as
+Under Assumption~\ref{ass:independence} and the assumption that $\{V_h : h \in H_k\}$
+form an orthonormal set spanning $W_k$ for each $k$, the transport operator satisfies
 \[
-    U_{ij} = \sum_{k \in K} \bar{\alpha}_{ji}^{(k)}\, P_{W_k},
+    U_{ij} = \sum_{k \in K} \bar{\alpha}_{ji}^{(k)}\, P_{W_k} + E_{ij},
 \]
 where $\bar{\alpha}_{ji}^{(k)} = \frac{1}{|H_k|} \sum_{h \in H_k} \alpha_{ji}^{(h)}$ is
-the mean attention weight of layer $k$'s heads from $x_i$ to $x_j$. In the block basis
-$\mathbb{R}^d = \bigoplus_k W_k$, this is the block-diagonal matrix
+the mean attention weight of layer $k$'s heads from $x_i$ to $x_j$, $P_{W_k}$ is the
+orthogonal projector onto $W_k$, and $E_{ij}$ is the cross-layer error term with
+\[
+    \|E_{ij}\|_F \leq \delta \cdot \sum_{k \in K} |H_k| \cdot \max_{h \in H_k}
+    |\alpha_{ji}^{(h)}|,
+\]
+where $\delta = \max_{k \neq l} \|P_{W_k} P_{W_l}\|_2$ measures subspace non-orthogonality
+(Remark~\ref{rem:orthogonality}).
+
+When the subspaces are orthogonal ($\delta = 0$), $E_{ij} = 0$ and the transport operator
+is exactly block-diagonal:
 \[
     U_{ij} = \operatorname{diag}\!\big(\bar{\alpha}_{ji}^{(\mathrm{min})}\,
     I_{d_{\mathrm{min}}},\; \bar{\alpha}_{ji}^{(\mathrm{nar})}\, I_{d_{\mathrm{nar}}},\;
     \ldots,\; \bar{\alpha}_{ji}^{(\mathrm{pos})}\, I_{d_{\mathrm{pos}}}\big).
 \]
-In particular, $U_{ij}$ has no off-diagonal blocks: transport within one standpoint layer
-does not cross into another.
 \end{proposition}
 
 \begin{proof}
-By Assumption~\ref{ass:orthogonality}, each head $h \in H_k$ has
+By the head grouping function $\gamma$, each head $h \in H_k$ has
 $\operatorname{range}(V_h) \subseteq W_k$, and the sets $\{V_h\}_{h \in H_k}$ are
 orthonormal and span $W_k$. Therefore $\sum_{h \in H_k} V_h V_h^\top = P_{W_k}$, the
 orthogonal projector onto $W_k$. Summing over heads:
 \[
     U_{ij} = \sum_{h=1}^{H} \alpha_{ji}^{(h)} V_h V_h^\top
            = \sum_{k \in K} \sum_{h \in H_k} \alpha_{ji}^{(h)} V_h V_h^\top
-           = \sum_{k \in K} \bar{\alpha}_{ji}^{(k)} P_{W_k},
+           = \sum_{k \in K} \bar{\alpha}_{ji}^{(k)} P_{W_k}.
 \]
-where the last step uses the fact that each $V_h V_h^\top$ projects onto a one-dimensional
-subspace of $W_k$, and $\sum_{h \in H_k} V_h V_h^\top = P_{W_k}$ by the orthonormal
-spanning assumption. Since $\{W_k\}$ are mutually orthogonal, $P_{W_k} P_{W_l} =
-\delta_{kl}\, P_{W_k}$, so the resulting operator is block-diagonal in the decomposition
-$\mathbb{R}^d = \bigoplus_k W_k$.
+This is the \emph{exact} expression for $U_{ij}$; no approximation has been made. The
+block structure depends on the orthogonality of the $\{P_{W_k}\}$. Decomposing $U_{ij}$
+in the block basis $\mathbb{R}^d = \bigoplus_k W_k$:
+\[
+    [U_{ij}]_{kl} = P_{W_k}\, U_{ij}\, P_{W_l}
+    = \bar{\alpha}_{ji}^{(k)}\, P_{W_k}\, P_{W_l}.
+\]
+When $\delta = 0$ (orthogonal subspaces), $P_{W_k} P_{W_l} = \delta_{kl} P_{W_k}$ and
+$U_{ij}$ is block-diagonal. When $\delta > 0$, the off-diagonal blocks satisfy
+$\|[U_{ij}]_{kl}\|_F \leq |\bar{\alpha}_{ji}^{(k)}| \cdot \delta \cdot \sqrt{d_k \cdot
+d_l}$ for $k \neq l$, and the stated bound on $E_{ij}$ follows.
 \end{proof}
 
-\begin{remark}[Metric Preservation]
+\begin{remark}[Metric Compatibility and Connection Type]
 \label{rem:metric-preservation}
-When $V_h^\top V_h = I_{d_v}$ for all $h$ (the value matrices have orthonormal columns),
-the block-diagonal form of $U_{ij}$ yields
-\[
-    \langle U_{ij} h,\, U_{ij} h' \rangle_F
-    = \sum_{k \in K} \big(\bar{\alpha}_{ji}^{(k)}\big)^2\, \langle P_{W_k} h,\,
-      P_{W_k} h' \rangle.
-\]
-For $U_{ij}$ to be an isometry of the fiber metric $g_F$ (i.e., $\langle U_{ij} h,\,
-U_{ij} h' \rangle_F = \langle h, h' \rangle_F$), we require
-$\big(\bar{\alpha}_{ji}^{(k)}\big)^2 = 1$ for all $k$. In practice, the attention weights
-satisfy $\sum_i \alpha_{ji}^{(h)} = 1$, so the per-pair weights need not be unity. Thus
-$U_{ij}$ is \emph{not} in general an isometry; it can amplify or attenuate standpoint
-components. The curvature (Definition~\ref{def:curvature}) measures the
-\emph{differential} transport across layers, which is the geometrically meaningful
-quantity.
+The transport operator $U_{ij}$ is \emph{not} in general an isometry of the fiber metric
+$g_F$. We distinguish three regimes:
+\begin{enumerate}
+    \item \textbf{Isometric transport} ($\bar{\alpha}_{ji}^{(k)} = 1$ for all $k$):
+    $\langle U_{ij} h, U_{ij} h' \rangle_F = \langle h, h' \rangle_F$. This is strict
+    parallel transport.
+    \item \textbf{Conformal transport} ($\bar{\alpha}_{ji}^{(k)} = \lambda$ for all $k$,
+    some $\lambda > 0$): $\langle U_{ij} h, U_{ij} h' \rangle_F = \lambda^2 \langle h, h'
+    \rangle_F$. All layers are scaled equally.
+    \item \textbf{Non-metric transport} (general case): Different layers are scaled by
+    different amounts. This is the generic situation in a transformer.
+\end{enumerate}
+In all three cases, $U_{ij}$ defines a \emph{discrete connection} on the fiber bundle
+(not necessarily metric-compatible). The curvature (Definition~\ref{def:curvature})
+measures the \emph{differential} transport across layers --- the inconsistency between
+how different standpoint layers are transported --- which is well-defined for any
+connection, regardless of metric compatibility.
 \end{remark}
+
+\begin{proposition}[Curvature as Inter-Layer Inconsistency]
+\label{prop:curvature-inconsistency}
+Under the block-diagonal structure ($\delta = 0$), the block-specific curvature norm has
+the explicit form
+\[
+    \|F_{ijk}\|_k = \left|\frac{\bar{\alpha}_{ji}^{(k)}\, \bar{\alpha}_{kj}^{(k)}}
+    {\bar{\alpha}^{(k)}_{\exp}} - 1\right| \cdot \sqrt{d_k}.
+\]
+The curvature is zero if and only if the composite attention weight for layer $k$ matches
+the baseline expectation. The curvature \emph{across} layers measures the inconsistency of
+transport rates: when $\|F_{ijk}\|_{\mathrm{nar}} \neq \|F_{ijk}\|_{\mathrm{mor}}$, the
+narrative and moral layers are being transported at different rates relative to their
+baselines, which is the geometric signature of standpoint drift.
+\end{proposition}
 
 % ------------------------------------------------------------------------------
 \subsection{Curvature as Path-Dependence}
@@ -307,71 +379,82 @@ path-independent.
 Hence the curvature is trivial.
 \end{proof}
 
-\begin{corollary}[Block-Specific Curvature Detects Binding Failure]
-\label{cor:binding-failure}
+\begin{definition}[Block-Specific Curvature]
+\label{def:binding-failure}
 For standpoint layer $k \in K$, define the \textbf{block-specific curvature}
 \[
-    [F_{ijk}]_k = P_{W_k}\, F_{ijk}\, P_{W_k} \in \operatorname{Mat}(d_k, \mathbb{R}),
+    [F_{ijk}]_k = \Pi_k\, F_{ijk}\, \Pi_k \in \operatorname{Mat}(d, \mathbb{R}),
 \]
 and the \textbf{block-specific curvature norm}
 \[
-    \|F_{ijk}\|_k = \big\|[F_{ijk}]_k - I_{d_k}\big\|_F.
+    \|F_{ijk}\|_k = \big\|[F_{ijk}]_k - \Pi_k\big\|_F.
 \]
-Then
+\end{definition}
+
+\begin{theorem}[Block-Specific Curvature Detects Binding Failure]
+\label{thm:binding-failure}
+For standpoint layer $k \in K$ with non-trivial standpoint state ($\psi_k(x_i) \neq 0$):
 \[
     \|F_{ijk}\|_k > 0 \quad\Longleftrightarrow\quad \text{the commitment in layer $k$
     was not preserved through event $x_j$ (binding failure in layer $k$)}.
 \]
-\end{corollary}
+\end{theorem}
 
 \begin{proof}
+Under the block-diagonal approximation (Proposition~\ref{prop:block-structure} with
+$\delta = 0$), $U_{ij} = \sum_k \bar{\alpha}_{ji}^{(k)} P_{W_k}$ and the curvature
+$F_{ijk}$ is also block-diagonal. The $k$-th block satisfies
+$[F_{ijk}]_k = (\bar{\alpha}_{ji}^{(k)} \bar{\alpha}_{kj}^{(k)} /
+\bar{\alpha}^{(k)}_{\exp})\, I_{d_k}$, so $\|F_{ijk}\|_k = 0$ if and only if
+$\bar{\alpha}_{ji}^{(k)} \bar{\alpha}_{kj}^{(k)} = \bar{\alpha}^{(k)}_{\exp}$.
+
 ($\Leftarrow$) If the commitment in layer $k$ was not preserved, then the standpoint
 component $\psi_k$ changed non-trivially between $x_i$ and $x_k$ due to the intervening
-event $x_j$. Under the block-diagonal structure of Proposition~\ref{prop:block-structure},
-this means the $k$-th diagonal block of $U_{ij} \cdot U_{jk}$ differs from the $k$-th
-diagonal block of $U_{ik}^{\exp}$, so $[F_{ijk}]_k \neq I_{d_k}$ and hence
-$\|F_{ijk}\|_k > 0$.
+event $x_j$. This means $\bar{\alpha}_{ji}^{(k)} \bar{\alpha}_{kj}^{(k)} \neq
+\bar{\alpha}^{(k)}_{\exp}$, so $[F_{ijk}]_k \neq \Pi_k$ and $\|F_{ijk}\|_k > 0$.
 
-($\Rightarrow$) If $[F_{ijk}]_k \neq I_{d_k}$, then the restriction of the composite
-transport $U_{ij} \cdot U_{jk}$ to $W_k$ differs from the restriction of
-$U_{ik}^{\exp}$ to $W_k$. The event $x_j$ introduced an unexpected change in layer $k$'s
-standpoint component---by definition, a commitment that was not preserved.
+($\Rightarrow$) If $\|F_{ijk}\|_k > 0$, then $[F_{ijk}]_k \neq \Pi_k$, which means the
+composite transport through $W_k$ differs from the expected transport. The event $x_j$
+introduced an unexpected change in layer $k$'s standpoint component---a commitment that
+was not preserved.
+
+For the non-orthogonal case ($\delta > 0$), the block-specific curvature acquires an
+$O(\delta)$ correction from cross-layer leakage, but the binding failure characterization
+remains valid as long as the curvature signal exceeds the $O(\delta)$ noise floor.
 \end{proof}
 
-\begin{proposition}[Block Decomposition of Total Curvature]
-\label{prop:curvature-block-decomposition}
-The total curvature norm decomposes as
+\begin{remark}[Block Decomposition: Orthogonal vs.\ Non-Orthogonal]
+\label{rem:block-decomposition}
+When the subspaces are orthogonal ($\delta = 0$), the total curvature decomposes exactly:
 \[
     \|F_{ijk} - I_d\|_F^2 = \sum_{k \in K} \big\|[F_{ijk}]_k - I_{d_k}\big\|_F^2
     + \sum_{\substack{k,l \in K \\ k \neq l}} \big\|P_{W_k}\, F_{ijk}\, P_{W_l}\big\|_F^2.
 \]
-\end{proposition}
+This follows from the Pythagorean theorem for the Frobenius norm, using $P_{W_k} P_{W_l}
+= \delta_{kl} P_{W_k}$.
 
-\begin{proof}
-The Frobenius norm squared $\|M\|_F^2 = \operatorname{tr}(M^\top M)$ is the sum of
-squares of all matrix entries. Under the orthogonal direct sum decomposition
-$\mathbb{R}^d = \bigoplus_k W_k$, the matrix $F_{ijk} - I_d$ decomposes into diagonal
-blocks $(k = l)$ and off-diagonal blocks $(k \neq l)$. Since the blocks are orthogonal
-in the Frobenius inner product (the projectors $P_{W_k}$ are mutually orthogonal), the
-cross terms vanish:
+When $\delta > 0$, the oblique projectors $\Pi_k$ satisfy $\Pi_k \Pi_l = 0$ for $k \neq
+l$, but the Frobenius inner product between blocks $\Pi_k M \Pi_l$ and $\Pi_{k'} M
+\Pi_{l'}$ does not generally vanish for $(k,l) \neq (k',l')$. The total curvature norm
+acquires cross-block correction terms:
 \[
-    \|F_{ijk} - I_d\|_F^2
-    = \Big\|\sum_{k,l} P_{W_k}(F_{ijk} - I_d)P_{W_l}\Big\|_F^2
-    = \sum_{k,l} \|P_{W_k}(F_{ijk} - I_d)P_{W_l}\|_F^2.
+    \|F_{ijk} - I_d\|_F^2 = \sum_{k,l} \|\Pi_k(F_{ijk} - I_d)\Pi_l\|_F^2
+    + O(\delta).
 \]
-Separating diagonal ($k = l$, noting $P_{W_k} I_d P_{W_k} = I_{d_k}$) from off-diagonal
-terms ($k \neq l$, noting $P_{W_k} I_d P_{W_l} = 0$) yields the stated identity.
-\end{proof}
+The block-specific norms $\|[F_{ijk}]_k - \Pi_k\|_F$ remain well-defined and
+experimentally meaningful as the primary diagnostic quantity.
+\end{remark}
 
 % ------------------------------------------------------------------------------
-\subsection{Non-Abelian Structure from Layer Composition}
+\subsection{Dynamic Non-Commutativity from Layer Composition}
 \label{sec:non-abelian}
 
 The block-diagonal structure of $U_{ij}$ (Proposition~\ref{prop:block-structure}) might
-suggest that the transport operators commute---that is, that the gauge group acts by
-abelian rotations within each block. We show that this is false: the non-abelian
-structure of the connection arises not from cross-talk within a single attention layer,
-but from the \emph{composition} of multiple attention layers in the transformer.
+suggest that the transport operators commute---that is, that the structure group acts by
+independent rotations within each block. We show that this is false at the level of
+multi-layer dynamics: the non-commutativity of composed transport arises not from
+cross-talk within a single attention layer, but from the \emph{dynamic dependence} of
+layer $l+1$'s attention weights on layer $l$'s output.
 
 \begin{definition}[Effective Multi-Layer Transport]
 \label{def:effective-transport}
@@ -398,8 +481,8 @@ transport is
 \]
 The cross-term $U_{ij}^{B}\, U_{ij}^{A}$ maps $W_{\mathrm{nar}} \to W_{\mathrm{mor}}$
 (non-trivially), creating inter-layer coupling that does not exist in the single-layer
-transport operators. In particular, $U_{ij}^{AB} \neq U_{ij}^{BA}$ in general, and the
-gauge group acts non-abelianly on the composed transport.
+transport operators. In particular, $U_{ij}^{AB} \neq U_{ij}^{BA}$ in general: the
+composed transport is non-commutative (Remark~\ref{rem:non-abelian-source}).
 \end{proposition}
 
 \begin{proof}
@@ -410,15 +493,16 @@ $U_{ij}^{(B)} = \bar{\alpha}_{ji}^{B}\, P_{W_{\mathrm{mor}}}$. Their product is
     = \bar{\alpha}_{ji}^{B}\, \bar{\alpha}_{ji}^{A}\, P_{W_{\mathrm{mor}}}\,
       P_{W_{\mathrm{nar}}}.
 \]
-Since $W_{\mathrm{nar}} \perp W_{\mathrm{mor}}$ by Assumption~\ref{ass:orthogonality},
-$P_{W_{\mathrm{mor}}}\, P_{W_{\mathrm{nar}}} = 0$. However, this analysis applies to a
-\emph{single} attention layer where all heads are either in $\mathrm{nar}$ or $\mathrm{mor}$.
+By Assumption~\ref{ass:independence}, $W_{\mathrm{nar}}$ and $W_{\mathrm{mor}}$ are
+independent but \emph{not necessarily orthogonal}; thus $P_{W_{\mathrm{mor}}}\,
+P_{W_{\mathrm{nar}}} \neq 0$ in general. The cross-term $U_{ij}^{B}\, U_{ij}^{A} =
+\bar{\alpha}_{ji}^{B}\, \bar{\alpha}_{ji}^{A}\, P_{W_{\mathrm{mor}}}\, P_{W_{\mathrm{nar}}}$
+is therefore non-zero as a map from $W_{\mathrm{nar}}$ to $W_{\mathrm{mor}}$.
 
-The crucial point is that in a real transformer, the residual stream at the input of
+The deeper point is that in a multi-layer transformer, the residual stream at the input of
 layer $B$ is $h + U_{ij}^{(A)}(h)$---layer $B$ sees layer $A$'s output, not the raw
 input. Layer $B$'s attention pattern $\alpha_{ji}^{B,(h)}$ is computed from query and key
-projections of this modified residual stream. Thus, even though $W_{\mathrm{nar}} \perp
-W_{\mathrm{mor}}$ as subspaces of the value space, the attention \emph{weights} of layer
+projections of this modified residual stream. Thus the attention \emph{weights} of layer
 $B$ depend on information that layer $A$ placed into $W_{\mathrm{nar}}$. The result is
 that $U_{ij}^{B}$ implicitly couples to $W_{\mathrm{nar}}$ through the query-key
 mechanism: $\alpha_{ji}^{B,(h)} = f(Q_B(h + U_{ij}^{(A)}(h)), K_B(\cdot))$.
@@ -441,17 +525,28 @@ For the reverse ordering:
 \]
 Since the attention weights of layer $A$ now depend on layer $B$'s output (which has a
 $W_{\mathrm{mor}}$ component), the result differs from $U_{ij}^{BA}$. The non-commutativity
-$U_{ij}^{AB} \neq U_{ij}^{BA}$ is the signature of non-abelian gauge structure.
+$U_{ij}^{AB} \neq U_{ij}^{BA}$ is the signature of dynamic non-commutativity from layer
+composition (Remark~\ref{rem:non-abelian-source}).
 \end{proof}
 
-\begin{remark}[Source of Non-Abelian Structure]
+\begin{remark}[Source of Non-Commutativity]
 \label{rem:non-abelian-source}
-The non-abelian structure arises from the \emph{stacking} of attention layers, not from
-off-diagonal blocks within a single layer's transport operator. Within any single layer,
-$U_{ij}$ is block-diagonal by Proposition~\ref{prop:block-structure}. The non-commutativity
-enters because layer $l+1$'s query-key computation depends on layer $l$'s value output.
-This is the discrete analogue of the classical result that non-abelian gauge fields arise
-from the composition of local gauge transformations, not from the structure group itself.
+The structure group $G = \prod_{k \in K} O(d_k)$ is \emph{abelian}: each block $O(d_k)$
+acts independently on $W_k$, and distinct blocks commute. The non-commutativity
+$U_{ij}^{AB} \neq U_{ij}^{BA}$ therefore does \textbf{not} arise from the gauge group
+itself. It arises from the \emph{dynamic dependence} of layer $l+1$'s attention weights on
+layer $l$'s residual stream output---the fact that $\alpha^{(B)}$ is a function of the
+post-layer-$A$ hidden state, not the pre-layer-$A$ state.
+
+This is best understood by analogy with gauge theory coupled to matter fields. In
+Yang--Mills theory with fermions, the gauge group may be abelian (as in $U(1)$
+electrodynamics), yet the effective dynamics is non-trivial because the gauge field
+couples to the matter field (the Dirac spinor), which in turn back-reacts on the gauge
+field. In our setting, the residual stream plays the role of the matter field, and the
+attention weights play the role of the gauge field: each layer's connection coefficients
+depend on the current state of the residual stream, which was shaped by all preceding
+layers. The non-commutativity is a property of this coupled dynamics, not of the
+underlying symmetry group.
 \end{remark}
 
 % ------------------------------------------------------------------------------
@@ -467,34 +562,45 @@ curvature norms satisfy this requirement.
 Under the gauge transformation $U_{ij} \mapsto g_j\, U_{ij}\, g_i^{-1}$ with $g_i, g_j
 \in G = \prod_{k \in K} O(d_k)$, the block-specific curvature norms are invariant:
 \[
-    \big\|g_i\, [F_{ijk}]_k\, g_i^{-1} - I_{d_k}\big\|_F = \big\|[F_{ijk}]_k - I_{d_k}\big\|_F
-    \qquad \forall\, k \in K.
+    \big\|[F^g_{ijk}]_k - \Pi_k\big\|_F = \big\|[F_{ijk}]_k - \Pi_k\big\|_F
+    \qquad \forall\, k \in K,
 \]
+where $F^g_{ijk}$ is the gauge-transformed curvature and $[F^g_{ijk}]_k = \Pi_k\,
+F^g_{ijk}\, \Pi_k$.
 \end{proposition}
 
 \begin{proof}
 Since $g_i \in G = \prod_{k \in K} O(d_k)$, write $g_i = (g_i^{(\mathrm{min})}, \ldots,
-g_i^{(\mathrm{pos})})$ with each $g_i^{(k)} \in O(d_k)$. Under the block-diagonal structure
-of the transport operators (Proposition~\ref{prop:block-structure}), the curvature
-$F_{ijk}$ is also block-diagonal (as the product of block-diagonal matrices is
-block-diagonal). The gauge transformation acts on the $k$-th block by conjugation:
-\[
-    [F_{ijk}]_k \;\longmapsto\; g_i^{(k)}\, [F_{ijk}]_k\, \big(g_i^{(k)}\big)^{-1}.
-\]
+g_i^{(\mathrm{pos})})$ with each $g_i^{(k)} \in O(d_k)$. Each $g_i$ acts on $\mathbb{R}^d$
+by applying $g_i^{(k)}$ within $W_k$ and leaving $W_l$ ($l \neq k$) unchanged. Therefore
+$g_i$ maps each $W_k$ to itself, and the oblique projectors satisfy $g_i\, \Pi_k\,
+g_i^{-1} = \Pi_k$ (the subspaces are gauge-invariant).
+
+The gauge-transformed curvature is $F^g_{ijk} = g_k\, F_{ijk}\, g_k^{-1}$. The
+block-specific curvature transforms as:
+\begin{align*}
+    [F^g_{ijk}]_k
+    &= \Pi_k\, (g_k\, F_{ijk}\, g_k^{-1})\, \Pi_k \\
+    &= g_k^{(k)}\, (\Pi_k\, F_{ijk}\, \Pi_k)\, (g_k^{(k)})^{-1}
+       & \text{(since } g_k\, \Pi_k = \Pi_k\, g_k \text{ on } W_k\text{)} \\
+    &= g_k^{(k)}\, [F_{ijk}]_k\, (g_k^{(k)})^{-1}.
+\end{align*}
 Therefore:
 \begin{align*}
-    \big\|g_i\, [F_{ijk}]_k\, g_i^{-1} - I_{d_k}\big\|_F
-    &= \big\|g_i^{(k)}\, [F_{ijk}]_k\, (g_i^{(k)})^{-1} - I_{d_k}\big\|_F \\
-    &= \big\|g_i^{(k)}\, \big([F_{ijk}]_k - I_{d_k}\big)\, (g_i^{(k)})^{-1}\big\|_F
-       & \text{(since } g_i^{(k)}\, I_{d_k}\, (g_i^{(k)})^{-1} = I_{d_k}\text{)} \\
-    &= \big\|[F_{ijk}]_k - I_{d_k}\big\|_F,
+    \big\|[F^g_{ijk}]_k - \Pi_k\big\|_F
+    &= \big\|g_k^{(k)}\, [F_{ijk}]_k\, (g_k^{(k)})^{-1} - \Pi_k\big\|_F \\
+    &= \big\|g_k^{(k)}\, \big([F_{ijk}]_k - \Pi_k\big)\, (g_k^{(k)})^{-1}\big\|_F
+       & \text{(since } g_k^{(k)}\, \Pi_k\, (g_k^{(k)})^{-1} = \Pi_k\text{)} \\
+    &= \big\|[F_{ijk}]_k - \Pi_k\big\|_F,
 \end{align*}
 where the last step uses the Frobenius norm invariance under orthogonal conjugation:
 $\|Q A Q^\top\|_F = \|A\|_F$ for all $Q \in O(n)$ and $A \in \operatorname{Mat}(n,
-\mathbb{R})$. To verify this identity, note that $\|Q A Q^\top\|_F^2 = \operatorname{tr}(
-Q A^\top Q^\top Q A Q^\top) = \operatorname{tr}(Q A^\top A Q^\top) = \operatorname{tr}(
-A^\top A\, Q^\top Q) = \operatorname{tr}(A^\top A) = \|A\|_F^2$, using $Q^\top Q = I$ and
-the cyclic property of the trace.
+\mathbb{R})$, verified by $\|Q A Q^\top\|_F^2 = \operatorname{tr}(Q A^\top A Q^\top) =
+\operatorname{tr}(A^\top A) = \|A\|_F^2$.
+
+Note: this proof does \emph{not} require the subspaces to be orthogonal or the curvature
+to be block-diagonal. The gauge invariance of block-specific curvature norms holds for
+any independent subspaces with oblique projectors.
 \end{proof}
 
 \begin{remark}[Physical Meaning]
@@ -529,9 +635,9 @@ the geometric framework~\cite{LCESA}, and the transformer instantiation
 \midrule
 $M_t$: self-jurisdiction state &
 $\Psi_{x_t}$: standpoint section &
-$P_W h_{x_t}$: projected residual stream \\[4pt]
+$\Pi_W h_{x_t}$: oblique-projected residual stream \\[4pt]
 $\mathrm{Bind}(c_t, a_t, S_t, \ell_t)$ &
-Parallel transport $\Pi_\Psi(j \leftarrow i)$ &
+Connection transport $\Pi_\Psi(j \leftarrow i)$ &
 Attention operation $U_{ij}$ \\[4pt]
 Warrant Conservation &
 Flat transport condition (1) &
@@ -547,7 +653,7 @@ Non-zero curvature $F_{ijk}$ &
 Path-dependence of attention transport \\[4pt]
 Layer $k$ binding failure &
 $\|F_{ijk}\|_k > 0$ &
-$\|[F_{ijk}]_k - I_{d_k}\|_F > 0$ \\[4pt]
+$\|[F_{ijk}]_k - \Pi_k\|_F > 0$ \\[4pt]
 12 diagnostic modes &
 Curvature decomposition by layer and scenario type &
 Block-specific curvature norms across T1/T2/T3 conversations \\
@@ -566,7 +672,7 @@ the composite transport through event $x_j$ to event $x_k$. Then for each layer 
 \end{theorem}
 
 \begin{proof}
-This is a restatement of Corollary~\ref{cor:binding-failure} in the language
+This is a restatement of Theorem~\ref{thm:binding-failure} in the language
 of~\cite{self-jurisdiction}. The commitment architecture defines binding failure as the
 situation in which the self-jurisdiction state $M_t$ at time $t$ does not cohere with the
 prior committed state. In the geometric instantiation, $M_t$ corresponds to the standpoint
@@ -574,9 +680,9 @@ state $\Psi_{x_t}$ (Table~\ref{tab:correspondence}), and the commitment is prese
 and only if parallel transport from $x_i$ to $x_k$ (through the pressure event $x_j$)
 yields the same result as the expected direct transport. The curvature $F_{ijk}$ measures
 exactly this discrepancy: $F_{ijk} = I_d$ means transport is path-independent (commitment
-preserved), and $[F_{ijk}]_k \neq I_{d_k}$ means layer $k$'s commitment was violated.
+preserved), and $[F_{ijk}]_k \neq \Pi_k$ means layer $k$'s commitment was violated.
 
-For the forward direction: if $\|F_{ijk}\|_k > 0$, then $[F_{ijk}]_k \neq I_{d_k}$,
+For the forward direction: if $\|F_{ijk}\|_k > 0$, then $[F_{ijk}]_k \neq \Pi_k$,
 so the $k$-th block of the composite transport $U_{ij} \cdot U_{jk}$ differs from the
 $k$-th block of $U_{ik}^{\exp}$. The event $x_j$ induced a change in $\psi_k$ that was
 not present in the expected (flat) transport. By the correspondence $U_{ij} \leftrightarrow
@@ -587,7 +693,7 @@ For the converse: if the commitment in layer $k$ was not preserved, then $\psi_k
 \neq \psi_k^{\exp}(x_k)$ (the standpoint component at $x_k$ differs from the expected
 value). Since $\psi_k(x_k) = [U_{ij} \cdot U_{jk}]_k\, \psi_k(x_i)$ and
 $\psi_k^{\exp}(x_k) = [U_{ik}^{\exp}]_k\, \psi_k(x_i)$, we have $[U_{ij} \cdot U_{jk}]_k
-\neq [U_{ik}^{\exp}]_k$, hence $[F_{ijk}]_k \neq I_{d_k}$ and $\|F_{ijk}\|_k > 0$.
+\neq [U_{ik}^{\exp}]_k$, hence $[F_{ijk}]_k \neq \Pi_k$ and $\|F_{ijk}\|_k > 0$.
 \end{proof}
 
 \begin{remark}[The Low-Curvature Attractor]

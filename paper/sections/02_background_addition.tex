@@ -12,10 +12,10 @@ entities through the residual stream, and safety
 heads~\cite{zou2023representation} that encode refusal-related
 representations in late layers. Our framework provides a geometric unification:
 each head type corresponds to a standpoint layer, and the composition of heads
-implements parallel transport on a fiber bundle. The key difference from prior
+defines a discrete connection on a fiber bundle. The key difference from prior
 work is that we do not merely \emph{describe} what heads do --- we prove that
-their collective operation \emph{is} parallel transport, with curvature measuring
-standpoint consistency.
+their collective operation defines a connection, with curvature measuring
+the inter-layer inconsistency and standpoint drift.
 
 The key insight from mechanistic interpretability --- that the residual stream
 is the central communication channel of the transformer, and that attention heads
@@ -52,3 +52,12 @@ directions: they are basis vectors of the standpoint subspaces $W_k$, and the
 The difference is that representation engineering identifies individual
 directions, whereas we identify the full subspace structure and its transport
 properties.
+
+Linear probing~\cite{belinkov2021probing} trains a classifier on a layer's
+activations to predict whether a specific property is encoded. This answers
+\emph{what information a layer contains}. Curvature answers a complementary
+question: \emph{whether that information is preserved across events}. A layer
+can have high probing accuracy (it encodes the right commitment) yet high
+curvature (it fails to transport that commitment consistently). The two
+diagnostics are orthogonal: probing measures representational content, curvature
+measures transport fidelity. A complete diagnostic requires both.
