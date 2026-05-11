@@ -110,6 +110,26 @@ MODELS: dict[str, ModelConfig] = {
     ),
 }
 
+
+# Override for Colab/Kaggle: 4-bit Llama-7b
+def get_model_config(name: str, force_4bit: bool = False) -> ModelConfig:
+    """Get model config, optionally forcing 4-bit quantization."""
+    config = MODELS[name]
+    if force_4bit:
+        config = ModelConfig(
+            name=config.name,
+            hf_name=config.hf_name,
+            d_model=config.d_model,
+            n_layers=config.n_layers,
+            n_heads=config.n_heads,
+            d_head=config.d_head,
+            device=config.device,
+            dtype=config.dtype,
+            load_in_4bit=True,
+        )
+    return config
+
+
 # ============================================================================
 # Statistical thresholds
 # ============================================================================

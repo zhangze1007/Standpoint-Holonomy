@@ -40,10 +40,27 @@ def load_model(config: ModelConfig) -> HookedTransformer:
     """
     dtype = getattr(torch, config.dtype)
     print(f"Loading model {config.name} ({config.hf_name}) on {config.device} ...")
+
+    kwargs = {
+        "device": config.device,
+        "dtype": dtype,
+    }
+
+    # 4-bit quantization via bitsandbytes (Colab/Kaggle friendly)
+    if config.load_in_4bit:
+        try:
+            from transformers import BitsAndBytesConfig
+            kwargs["quantization_config"] = BitsAndBytesConfig(
+                load_in_4bit=True,
+                bnb_4bit_compute_dtype=dtype,
+            )
+            print("  Using 4-bit quantization")
+        except ImportError:
+            print("  Warning: bitsandbytes not available, falling back to full precision")
+
     model = HookedTransformer.from_pretrained(
         config.hf_name,
-        device=config.device,
-        dtype=dtype,
+        **kwargs,
     )
     model.eval()
     print(f"  Model loaded: {model.cfg.n_layers} layers, "
