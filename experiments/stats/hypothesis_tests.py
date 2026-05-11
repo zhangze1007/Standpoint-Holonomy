@@ -1,12 +1,15 @@
 """
 LCESA Hypothesis Tests
 ======================
-Implements hypothesis tests H1, H2, H3, and H6 for the Low-Curvature
-Endogenous Standpoint Attractor (LCESA) curvature validation experiment.
+Implements hypothesis tests H1, H2, H3, H4, H5, and H6 for the
+Low-Curvature Endogenous Standpoint Attractor (LCESA) curvature
+validation experiment.
 
 H1: Block specificity — curvature concentrates in the target failure block.
 H2: Baseline near zero — T1 curvature is near zero compared to failure.
 H3: Scenario discrimination — curvature vectors differ across scenarios.
+H4: CKA discrimination — CKA values discriminate across scenarios per layer.
+H5: Ablation sensitivity — curvature degrades gracefully under ablation.
 H6: Diagnostic superiority — curvature outperforms probing baselines.
 """
 
@@ -71,6 +74,9 @@ def h1_block_specificity(df: pd.DataFrame) -> dict:
     all failure scenarios is significantly above chance level (1/n_blocks),
     using a one-sided one-sample t-test.
 
+    Reports results separately for head-assigned layers (those with
+    attention heads assigned via gamma) and non-assigned layers.
+
     Parameters
     ----------
     df : pd.DataFrame
@@ -80,8 +86,18 @@ def h1_block_specificity(df: pd.DataFrame) -> dict:
     -------
     dict
         Per-scenario and aggregate results with p-values and pass/fail flags.
+        Includes ``head_assigned`` vs ``non_assigned`` breakdowns.
     """
-    from experiments.config import FAILURE_LAYERS
+    from experiments.config import FAILURE_LAYERS, DATA_DIR
+
+    # Load head assignments (gamma) if available
+    gamma_path = DATA_DIR / "gpt2_grouping.npz"
+    head_counts = {}
+    if gamma_path.exists():
+        gamma = np.load(gamma_path)["gamma"]
+        layer_names_ordered = ["min", "nar", "soc", "mor", "pos"]
+        for idx, name in enumerate(layer_names_ordered):
+            head_counts[name] = int(np.sum(gamma == idx))
 
     curvature_cols = [
         c for c in df.columns
@@ -92,6 +108,8 @@ def h1_block_specificity(df: pd.DataFrame) -> dict:
 
     results = {}
     all_target_ratios = []
+    assigned_ratios = []
+    non_assigned_ratios = []
     failure_scenarios = {k: v for k, v in FAILURE_LAYERS.items() if v is not None}
 
     for scenario, target_layer in failure_scenarios.items():
@@ -114,11 +132,21 @@ def h1_block_specificity(df: pd.DataFrame) -> dict:
         target_ratios = ratios[:, target_idx]
         all_target_ratios.extend(target_ratios.tolist())
 
+        # Classify as head-assigned or not
+        n_heads = head_counts.get(target_layer, 0)
+        has_heads = n_heads > 0
+        if has_heads:
+            assigned_ratios.extend(target_ratios.tolist())
+        else:
+            non_assigned_ratios.extend(target_ratios.tolist())
+
         results[scenario] = {
             "target_layer": target_layer,
             "n_conversations": len(target_ratios),
             "mean_target_ratio": float(target_ratios.mean()),
             "median_target_ratio": float(np.median(target_ratios)),
+            "n_heads_assigned": n_heads,
+            "head_assigned": has_heads,
         }
 
     # Aggregate test: one-sample t-test that mean ratio > chance level
@@ -140,6 +168,26 @@ def h1_block_specificity(df: pd.DataFrame) -> dict:
         "passed": passed,
     }
 
+    # Breakdown: head-assigned vs non-assigned
+    if assigned_ratios:
+        a = np.array(assigned_ratios)
+        results["head_assigned_layers"] = {
+            "n": len(a),
+            "mean_ratio": float(a.mean()),
+            "median_ratio": float(np.median(a)),
+            "scenarios": [s for s, l in failure_scenarios.items()
+                          if head_counts.get(l, 0) > 0],
+        }
+    if non_assigned_ratios:
+        n = np.array(non_assigned_ratios)
+        results["non_assigned_layers"] = {
+            "n": len(n),
+            "mean_ratio": float(n.mean()),
+            "median_ratio": float(np.median(n)),
+            "scenarios": [s for s, l in failure_scenarios.items()
+                          if head_counts.get(l, 0) == 0],
+        }
+
     return results
 
 
@@ -147,11 +195,37 @@ def h1_block_specificity(df: pd.DataFrame) -> dict:
 # H2: Baseline near zero
 # ---------------------------------------------------------------------------
 
+def _cohens_d(a: np.ndarray, b: np.ndarray) -> float:
+    """Compute Cohen's d between two samples."""
+    pooled_std = np.sqrt((a.var() + b.var()) / 2)
+    if pooled_std == 0:
+        return 0.0
+    return float((a.mean() - b.mean()) / pooled_std)
+
+
+def _bootstrap_ci(
+    a: np.ndarray, b: np.ndarray, stat_fn, n_boot: int = 10000, alpha: float = 0.05
+) -> tuple:
+    """Bootstrap (1-alpha) CI for stat_fn(a, b)."""
+    rng = np.random.default_rng(42)
+    combined = np.concatenate([a, b])
+    na = len(a)
+    boots = []
+    for _ in range(n_boot):
+        idx = rng.choice(len(combined), size=len(combined), replace=True)
+        ba, bb = idx[:na], idx[na:]
+        boots.append(stat_fn(combined[ba], combined[bb]))
+    lo = float(np.percentile(boots, 100 * alpha / 2))
+    hi = float(np.percentile(boots, 100 * (1 - alpha / 2)))
+    return lo, hi
+
+
 def h2_baseline_near_zero(df: pd.DataFrame) -> dict:
     """Test H2: T1 (baseline) curvature is near zero.
 
     Compares T1 curvature (``curvature_total``) against failure-scenario
     curvature using a Mann-Whitney U test (alternative="less").
+    Also reports Cohen's d and 95% bootstrap CI.
 
     Parameters
     ----------
@@ -161,7 +235,7 @@ def h2_baseline_near_zero(df: pd.DataFrame) -> dict:
     Returns
     -------
     dict
-        Test statistics, p-values, and pass/fail flags.
+        Test statistics, p-values, effect sizes, CIs, and pass/fail flags.
     """
     t1_values = df.loc[df["scenario"] == "T1", "curvature_total"].dropna().values
     failure_values = df.loc[df["scenario"] != "T1", "curvature_total"].dropna().values
@@ -181,6 +255,11 @@ def h2_baseline_near_zero(df: pd.DataFrame) -> dict:
 
     t1_mean = float(t1_values.mean())
     failure_mean = float(failure_values.mean())
+    cohens_d = _cohens_d(failure_values, t1_values)  # positive = failure > T1
+
+    # Bootstrap 95% CI for the mean difference
+    diff_fn = lambda a, b: a.mean() - b.mean()
+    ci_lo, ci_hi = _bootstrap_ci(failure_values, t1_values, diff_fn)
 
     # Pass criterion: Mann-Whitney p < alpha (T1 curvature is less than failure)
     passed = p_value < ALPHA
@@ -189,6 +268,10 @@ def h2_baseline_near_zero(df: pd.DataFrame) -> dict:
         "t1_mean": t1_mean,
         "t1_std": float(t1_values.std()),
         "failure_mean": failure_mean,
+        "failure_std": float(failure_values.std()),
+        "mean_difference": failure_mean - t1_mean,
+        "cohens_d": cohens_d,
+        "mean_diff_ci_95": [ci_lo, ci_hi],
         "mann_whitney_statistic": float(statistic),
         "p_value": float(p_value),
         "passed": passed,
@@ -257,12 +340,17 @@ def h3_scenario_discrimination(df: pd.DataFrame) -> dict:
             all_passed = False
             continue
 
+        # Effect size: epsilon-squared = H / (n - 1)
+        n_total = sum(len(g) for g in groups)
+        epsilon_sq = float(statistic / (n_total - 1)) if n_total > 1 else 0.0
+
         passed = p_value < corrected_alpha
         if not passed:
             all_passed = False
 
         layer_results[layer_name] = {
             "statistic": float(statistic),
+            "epsilon_squared": epsilon_sq,
             "p_value": float(p_value),
             "corrected_alpha": float(corrected_alpha),
             "n_groups": len(groups),
@@ -275,6 +363,165 @@ def h3_scenario_discrimination(df: pd.DataFrame) -> dict:
         "n_layers": n_layers,
         "corrected_alpha": float(corrected_alpha),
         "all_layers_passed": all_passed,
+        "passed": all_passed,
+    }
+
+
+# ---------------------------------------------------------------------------
+# H4: CKA scenario discrimination
+# ---------------------------------------------------------------------------
+
+def h4_cka_discrimination(cka_df: pd.DataFrame) -> dict:
+    """Test H4: CKA values discriminate across scenarios.
+
+    For each model layer, runs Kruskal-Wallis on CKA values across scenarios
+    with Bonferroni correction.
+
+    Parameters
+    ----------
+    cka_df : pd.DataFrame
+        CKA results with columns: conversation_id, scenario, layer, cka.
+
+    Returns
+    -------
+    dict
+        Per-layer Kruskal-Wallis results and overall pass/fail.
+    """
+    layers = sorted(cka_df["layer"].unique())
+    n_layers = len(layers)
+    corrected_alpha = ALPHA / n_layers
+
+    layer_results = {}
+    all_passed = True
+
+    for layer in layers:
+        layer_df = cka_df[cka_df["layer"] == layer]
+        groups = []
+        scenario_labels = []
+        for scenario in sorted(layer_df["scenario"].unique()):
+            vals = layer_df.loc[layer_df["scenario"] == scenario, "cka"].dropna().values
+            if len(vals) > 0:
+                groups.append(vals)
+                scenario_labels.append(scenario)
+
+        if len(groups) < 2:
+            layer_results[layer] = {"error": "need at least 2 groups"}
+            all_passed = False
+            continue
+
+        try:
+            kw_result = stats.kruskal(*groups)
+            p_value = kw_result.pvalue
+            statistic = kw_result.statistic
+        except ValueError:
+            layer_results[layer] = {"error": "Kruskal-Wallis failed"}
+            all_passed = False
+            continue
+
+        n_total = sum(len(g) for g in groups)
+        epsilon_sq = float(statistic / (n_total - 1)) if n_total > 1 else 0.0
+
+        passed = p_value < corrected_alpha
+        if not passed:
+            all_passed = False
+
+        layer_results[layer] = {
+            "statistic": float(statistic),
+            "epsilon_squared": epsilon_sq,
+            "p_value": float(p_value),
+            "corrected_alpha": float(corrected_alpha),
+            "n_groups": len(groups),
+            "scenario_labels": scenario_labels,
+            "passed": passed,
+        }
+
+    return {
+        "per_layer": layer_results,
+        "n_layers": n_layers,
+        "corrected_alpha": float(corrected_alpha),
+        "all_layers_passed": all_passed,
+        "passed": all_passed,
+    }
+
+
+# ---------------------------------------------------------------------------
+# H5: Ablation sensitivity
+# ---------------------------------------------------------------------------
+
+def h5_ablation_sensitivity(ablation_df: pd.DataFrame) -> dict:
+    """Test H5: curvature degrades gracefully under ablation.
+
+    For each ablation parameter value, compute mean curvature_total per
+    scenario and test whether the ranking of scenarios is preserved using
+    Spearman correlation with the unablated (full) results.
+
+    Parameters
+    ----------
+    ablation_df : pd.DataFrame
+        Ablation results with columns: model, ablation_type, param_value,
+        conversation_id, scenario, layer, curvature_total.
+
+    Returns
+    -------
+    dict
+        Per-param Spearman correlation results and overall pass/fail.
+    """
+    ablation_types = ablation_df["ablation_type"].unique()
+    all_passed = True
+    param_results = {}
+
+    for abl_type in ablation_types:
+        type_df = ablation_df[ablation_df["ablation_type"] == abl_type]
+        param_values = sorted(type_df["param_value"].unique())
+        full_param = max(param_values)
+
+        full_df = type_df[type_df["param_value"] == full_param]
+        full_means = full_df.groupby("scenario")["curvature_total"].mean()
+
+        # Baseline entry for the unablated (full) parameter
+        param_results[f"{abl_type}_{full_param}"] = {
+            "ablation_type": abl_type,
+            "param_value": int(full_param),
+            "full_param": int(full_param),
+            "spearman_rho": 1.0,
+            "p_value": 0.0,
+            "n_scenarios": len(full_means),
+            "passed": True,
+        }
+
+        for param_val in param_values:
+            if param_val == full_param:
+                continue
+            sub_df = type_df[type_df["param_value"] == param_val]
+            sub_means = sub_df.groupby("scenario")["curvature_total"].mean()
+
+            common = full_means.index.intersection(sub_means.index)
+            if len(common) < 3:
+                param_results[f"{abl_type}_{param_val}"] = {"error": "too few scenarios"}
+                all_passed = False
+                continue
+
+            rho, p_val = stats.spearmanr(
+                full_means[common].values,
+                sub_means[common].values,
+            )
+            passed = rho >= 0.7 and p_val < ALPHA
+            if not passed:
+                all_passed = False
+
+            param_results[f"{abl_type}_{param_val}"] = {
+                "ablation_type": abl_type,
+                "param_value": int(param_val),
+                "full_param": int(full_param),
+                "spearman_rho": float(rho),
+                "p_value": float(p_val),
+                "n_scenarios": len(common),
+                "passed": passed,
+            }
+
+    return {
+        "per_param": param_results,
+        "all_passed": all_passed,
         "passed": all_passed,
     }
 
@@ -318,11 +565,18 @@ def h6_diagnostic_superiority(
 
     curvature_separation = float(failure_curv.mean() - t1_curv.mean())
 
-    # Probing: mean F1 across layers
+    # Probing: mean F1 across layers (prefer multiclass if available)
     if probing_df.empty:
         return {"error": "no probing data"}
 
-    probing_f1_mean = float(probing_df["f1_mean"].mean())
+    if "probe_type" in probing_df.columns:
+        multi_df = probing_df[probing_df["probe_type"] == "multiclass"]
+        if not multi_df.empty:
+            probing_f1_mean = float(multi_df["f1_mean"].mean())
+        else:
+            probing_f1_mean = float(probing_df["f1_mean"].mean())
+    else:
+        probing_f1_mean = float(probing_df["f1_mean"].mean())
 
     # Curvature discriminability: effect size (Cohen's d)
     pooled_std = np.sqrt(
@@ -342,7 +596,7 @@ def h6_diagnostic_superiority(
         "curvature_separation": curvature_separation,
         "curvature_cohens_d": float(cohens_d),
         "probing_f1_mean": probing_f1_mean,
-        "probing_f1_std": float(probing_df["f1_mean"].std()),
+        "probing_f1_std": float(multi_df["f1_mean"].std() if "probe_type" in probing_df.columns and not multi_df.empty else probing_df["f1_mean"].std()),
         "passed": passed,
     }
 
@@ -390,6 +644,26 @@ def run_all_tests(
 
     print("Running H3: Scenario discrimination ...")
     all_results["H3"] = h3_scenario_discrimination(curvature_df)
+
+    # H4: CKA discrimination
+    cka_path = results_dir / f"{model_name}_cka.csv"
+    if cka_path.exists():
+        print("Running H4: CKA scenario discrimination ...")
+        cka_df = pd.read_csv(cka_path)
+        all_results["H4"] = h4_cka_discrimination(cka_df)
+    else:
+        all_results["H4"] = {"skipped": True, "reason": "no CKA data"}
+        print("Warning: CKA results not found, skipping H4.")
+
+    # H5: Ablation sensitivity
+    ablation_path = results_dir / f"{model_name}_ablation.csv"
+    if ablation_path.exists():
+        print("Running H5: Ablation sensitivity ...")
+        ablation_df = pd.read_csv(ablation_path)
+        all_results["H5"] = h5_ablation_sensitivity(ablation_df)
+    else:
+        all_results["H5"] = {"skipped": True, "reason": "no ablation data"}
+        print("Warning: Ablation results not found, skipping H5.")
 
     if not probing_df.empty:
         print("Running H6: Diagnostic superiority ...")
