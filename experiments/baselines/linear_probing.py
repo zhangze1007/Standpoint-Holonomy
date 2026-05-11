@@ -4,6 +4,7 @@ import pandas as pd
 from pathlib import Path
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import cross_val_score
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
 from experiments.config import LAYER_NAMES, SCENARIO_TYPES, CACHE_DIR, RESULTS_DIR, MODELS
@@ -50,10 +51,11 @@ def run_linear_probing(
         if not X_by_layer[layer]:
             continue
         X = np.array(X_by_layer[layer])
-        X = StandardScaler().fit_transform(X)
-
-        clf = LogisticRegression(max_iter=1000, C=1.0)
-        scores = cross_val_score(clf, X, y, cv=5, scoring="f1")
+        pipe = Pipeline([
+            ("scaler", StandardScaler()),
+            ("clf", LogisticRegression(max_iter=1000, C=1.0)),
+        ])
+        scores = cross_val_score(pipe, X, y, cv=5, scoring="f1")
 
         results.append({
             "model": model_name,

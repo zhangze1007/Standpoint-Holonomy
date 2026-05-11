@@ -7,17 +7,21 @@ used in the Low-Curvature Endogenous Standpoint Attractor (LCESA) framework.
 Mathematical formulation:
     Transport operator:  U_{ij}^{(l)} = sum_k  alpha_bar_{ji}^{(k)}  P_{W_k}
     Curvature:           F_{ijk} = U_12 . U_23 . (U_13^exp)^{-1}
-    Block norm:          ||F_{ijk}||_k = ||[F_{ijk}]_k - I_{d_k}||_F
+    Block norm:          ||F_{ijk}||_k = ||Q_k^T (F - I) Q_k||_F
 """
 
 import csv
 import sys
 from pathlib import Path
-from typing import Dict, Tuple
+from typing import Dict, List, Tuple
 
 import numpy as np
 
 from experiments.config import LAYER_NAMES, MODELS, CACHE_DIR, RESULTS_DIR
+
+# Regularization constants
+EPSILON_PROJ = 1e-6   # added to each P_k during U construction
+EPSILON_INV = 1e-4    # added to U_exp before inversion (Tikhonov)
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +44,8 @@ def compute_transport_operator(
 
     where alpha_bar^{(k)} is the mean attention weight over heads assigned to
     standpoint layer k, and P_{W_k} is the projection onto the value subspace
-    spanned by those heads.
+    spanned by those heads.  A small diagonal regularization (EPSILON_PROJ) is
+    added to each P_k to prevent ill-conditioning at the source.
 
     Parameters
     ----------
@@ -69,6 +74,7 @@ def compute_transport_operator(
     n_standpoint = len(LAYER_NAMES)
 
     U = np.zeros((d_model, d_model), dtype=np.float64)
+    I_d = np.eye(d_model, dtype=np.float64)
 
     for k in range(n_standpoint):
         # Heads assigned to standpoint layer k
@@ -83,19 +89,81 @@ def compute_transport_operator(
         # Projection P_k: mean of V_h @ V_h^T over assigned heads
         # value_matrices[layer, head] is (d_model, d_head)
         V_heads = value_matrices[layer, head_mask]  # (n_assigned, d_model, d_head)
-        # V @ V^T for each head → (n_assigned, d_model, d_model)
+        # V @ V^T for each head -> (n_assigned, d_model, d_model)
         projections = np.einsum("hij,hkj->hik", V_heads, V_heads)
         P_k = projections.mean(axis=0)  # (d_model, d_model)
+
+        # Level 1 regularization: stabilize P_k before accumulation
+        P_k += EPSILON_PROJ * I_d
 
         U += alpha_k * P_k
 
     return U
 
 
+def compute_projection_bases(
+    value_matrices: np.ndarray,
+    gamma: np.ndarray,
+    layer: int,
+    energy_threshold: float = 0.9,
+) -> List[np.ndarray]:
+    """Compute gamma-aligned projection bases for each standpoint layer.
+
+    For each standpoint layer k, collect value matrices V_h for all heads h
+    where gamma[h] == k, concatenate their column spaces, and compute an
+    orthonormal basis via SVD.
+
+    Parameters
+    ----------
+    value_matrices : np.ndarray
+        Shape ``(n_layers, n_heads, d_model, d_head)``.
+    gamma : np.ndarray
+        Shape ``(n_heads,)`` with values in 0..4.
+    layer : int
+        Model layer at which to read value matrices.
+    energy_threshold : float
+        Fraction of singular value energy to retain.
+
+    Returns
+    -------
+    list[np.ndarray]
+        One ``(d_model, rank_k)`` orthonormal basis per standpoint layer.
+    """
+    d_model = value_matrices.shape[2]
+    n_standpoint = len(LAYER_NAMES)
+    bases = []
+
+    for k in range(n_standpoint):
+        head_indices = np.where(gamma == k)[0]
+        if len(head_indices) == 0:
+            bases.append(np.eye(d_model, dtype=np.float64))
+            continue
+
+        # Collect V_h columns: each head contributes (d_model, d_head)
+        # Concatenate horizontally: (d_model, n_heads * d_head)
+        V_concat = np.concatenate(
+            [value_matrices[layer, h] for h in head_indices], axis=1
+        )
+
+        # SVD to get orthonormal basis for column space
+        U, s, _ = np.linalg.svd(V_concat, full_matrices=False)
+
+        # Retain components accounting for energy_threshold of total energy
+        energy = np.cumsum(s ** 2) / np.sum(s ** 2)
+        rank = int(np.searchsorted(energy, energy_threshold)) + 1
+        rank = min(rank, len(s))
+
+        Q_k = U[:, :rank]  # (d_model, rank_k)
+        bases.append(Q_k)
+
+    return bases
+
+
 def compute_curvature(
     U_12: np.ndarray,
     U_23: np.ndarray,
     U_exp: np.ndarray,
+    projection_bases: List[np.ndarray] | None = None,
 ) -> Tuple[np.ndarray, Dict[str, float]]:
     """Compute the curvature tensor F and its block-specific norms.
 
@@ -103,12 +171,12 @@ def compute_curvature(
 
         F_{ijk} = U_{12} . U_{23} . (U_{13}^exp)^{-1}
 
-    and the block-specific norm is:
+    When ``projection_bases`` is provided, the block-specific norm for layer k
+    is computed by projecting ``(F - I)`` onto the gamma-aligned subspace Q_k::
 
-        ||F_{ijk}||_k = ||[F_{ijk}]_k - I_{d_k}||_F
+        ||F||_k = ||Q_k^T (F - I) Q_k||_F
 
-    where [F]_k denotes the k-th diagonal block of F, obtained by dividing
-    d_model into 5 equal-sized blocks.
+    Otherwise, falls back to equal-width diagonal blocks (legacy behavior).
 
     Parameters
     ----------
@@ -119,41 +187,51 @@ def compute_curvature(
     U_exp : np.ndarray
         Shape ``(d_model, d_model)`` — expected (direct) transport operator
         from event 1 to 3.
+    projection_bases : list[np.ndarray] or None
+        Gamma-aligned orthonormal bases per standpoint layer.  If None,
+        uses legacy equal-width block partition.
 
     Returns
     -------
     F : np.ndarray
         Shape ``(d_model, d_model)`` — the curvature tensor.
     block_norms : dict
-        ``{layer_name: float}`` — Frobenius norm of each diagonal block minus
-        identity, for each of the 5 standpoint layers.
+        ``{layer_name: float}`` — Frobenius norm of each block minus identity.
     """
     d_model = U_12.shape[0]
     n_standpoint = len(LAYER_NAMES)
 
-    # Invert the expected transport operator
+    # Level 2 regularization: Tikhonov damping before inversion
+    U_exp_reg = U_exp + EPSILON_INV * np.eye(d_model, dtype=U_exp.dtype)
+
     try:
-        U_exp_inv = np.linalg.inv(U_exp)
+        U_exp_inv = np.linalg.inv(U_exp_reg)
     except np.linalg.LinAlgError:
-        U_exp_inv = np.linalg.pinv(U_exp)
+        U_exp_inv = np.linalg.pinv(U_exp_reg)
 
     # Curvature tensor
     F = U_12 @ U_23 @ U_exp_inv
 
-    # Block-specific norms: divide d_model into 5 equal blocks
-    block_size = d_model // n_standpoint
+    # Block-specific norms
     block_norms: Dict[str, float] = {}
+    deviation = F - np.eye(d_model, dtype=F.dtype)
 
     for idx, name in enumerate(LAYER_NAMES):
-        start = idx * block_size
-        # Last block takes any remainder
-        end = d_model if idx == n_standpoint - 1 else (idx + 1) * block_size
-        block_dim = end - start
+        if projection_bases is not None:
+            Q_k = projection_bases[idx]  # (d_model, rank_k)
+            F_projected = Q_k.T @ deviation @ Q_k  # (rank_k, rank_k)
+            norm = float(np.linalg.norm(F_projected, "fro"))
+        else:
+            # Fallback: equal-width blocks (legacy behavior)
+            block_size = d_model // n_standpoint
+            start = idx * block_size
+            end = d_model if idx == n_standpoint - 1 else (idx + 1) * block_size
+            block_dim = end - start
+            F_block = F[start:end, start:end]
+            I_block = np.eye(block_dim, dtype=F.dtype)
+            norm = float(np.linalg.norm(F_block - I_block, "fro"))
 
-        F_block = F[start:end, start:end]
-        I_block = np.eye(block_dim, dtype=F.dtype)
-        norm = np.linalg.norm(F_block - I_block, "fro")
-        block_norms[name] = float(norm)
+        block_norms[name] = norm
 
     return F, block_norms
 
@@ -226,7 +304,8 @@ def run_curvature_computation(
         1. Load activations.npz and grouping gamma.
         2. Reorganise test-split activations into per-conversation dicts.
         3. For each model layer, compute baseline transport from T1 test data.
-        4. For each non-T1 test conversation at each layer, compute curvature.
+        4. For EVERY test conversation (including T1) at each layer, compute
+           curvature using gamma-aligned projection bases.
         5. Save results to CSV.
 
     Parameters
@@ -289,24 +368,34 @@ def run_curvature_computation(
         raise ValueError("No test-split activations found in the archive.")
 
     # ------------------------------------------------------------------
-    # 3-4. Compute curvature for every conversation at every layer
+    # 3-4. Compute curvature for EVERY conversation at every layer
     # ------------------------------------------------------------------
-    print(f"Computing curvature for {len(test_activations)} test conversations "
-          f"across {n_layers} layers ...")
-
-    # Organise by scenario for baseline computation
     all_conv_ids = sorted(test_activations.keys())
-    non_t1_convs = [c for c in all_conv_ids if not c.startswith("T1/")]
+
+    # Pre-compute projection bases using value matrices from any conversation
+    # (they share model weights, so we use the first available)
+    sample_V = None
+    for fields in test_activations.values():
+        if "value_matrices" in fields:
+            sample_V = fields["value_matrices"]
+            break
+
+    print(f"Computing curvature for {len(all_conv_ids)} test conversations "
+          f"across {n_layers} layers (including T1 baseline) ...")
 
     rows = []
-    total = n_layers * len(non_t1_convs)
+    total = n_layers * len(all_conv_ids)
     done = 0
+    warn_count = 0
 
     for layer in range(n_layers):
         # Compute baseline transport from T1 test conversations at this layer
         U_exp = compute_baseline_transport(test_activations, "T1", layer, gamma)
 
-        for conv_id in non_t1_convs:
+        # Compute gamma-aligned projection bases for this layer
+        proj_bases = compute_projection_bases(sample_V, gamma, layer)
+
+        for conv_id in all_conv_ids:
             fields = test_activations[conv_id]
             attn = fields["attention"]
             V = fields["value_matrices"]
@@ -316,12 +405,21 @@ def run_curvature_computation(
             U_23 = compute_transport_operator(attn, V, gamma, 1, 2, layer)
 
             # Curvature tensor and block norms
-            _, block_norms = compute_curvature(U_12, U_23, U_exp)
+            F, block_norms = compute_curvature(U_12, U_23, U_exp, proj_bases)
+
+            # Level 3 sanity check: warn if F has extreme singular values
+            if warn_count < 5:
+                sv = np.linalg.svd(F, compute_uv=False)
+                if sv[0] > 1e8:
+                    cond = sv[0] / max(sv[-1], 1e-30)
+                    print(f"  WARNING: layer={layer} conv={conv_id} "
+                          f"max_sv={sv[0]:.2e}, cond={cond:.2e}")
+                    warn_count += 1
 
             # Extract scenario from conv_id
             scenario = conv_id.split("/")[0]
 
-            # Total curvature is the Frobenius norm of all block norms combined
+            # Total curvature (L2 norm of block norms)
             curvature_total = float(np.sqrt(sum(v ** 2 for v in block_norms.values())))
 
             row = {"conversation_id": conv_id, "scenario": scenario, "layer": layer}

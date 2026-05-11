@@ -146,7 +146,8 @@ def extract_attention_for_conversation(
     tokens, event_token_ranges = _tokenize_events(model, events)
 
     # -- build names_filter for the cache ----------------------------------
-    names_filter = ["blocks.*.hook_resid_post", "blocks.*.attn.hook_pattern"]
+    def names_filter(name: str) -> bool:
+        return "hook_resid_post" in name or "hook_pattern" in name
 
     # -- forward pass with cache -------------------------------------------
     with torch.no_grad():

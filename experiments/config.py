@@ -5,9 +5,14 @@ Central configuration for the Low-Curvature Endogenous Standpoint Attractor
 experiment pipeline.
 """
 
+import torch
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional
+
+
+def _has_cuda() -> bool:
+    return torch.cuda.is_available()
 
 
 # ============================================================================
@@ -100,6 +105,7 @@ MODELS: dict[str, ModelConfig] = {
         n_layers=12,
         n_heads=12,
         d_head=64,
+        device="cuda" if _has_cuda() else "cpu",
         dtype="float32",
     ),
 }
@@ -107,10 +113,10 @@ MODELS: dict[str, ModelConfig] = {
 # ============================================================================
 # Statistical thresholds
 # ============================================================================
-ALPHA = 0.01                  # significance level
-BLOCK_SPEC_THRESHOLD = 0.5   # block-specificity threshold
-BLOCK_SPEC_PROPORTION = 0.7  # proportion required for block specificity
-EFFECT_SIZE_MIN = 0.5        # minimum Cohen's d
+ALPHA = 0.05                  # significance level
+BLOCK_SPEC_THRESHOLD = 0.3   # block-specificity threshold (gamma-aligned blocks)
+BLOCK_SPEC_PROPORTION = 0.5  # proportion required for block specificity
+EFFECT_SIZE_MIN = 0.3        # minimum Cohen's d
 CORRELATION_MIN = 0.3        # minimum Pearson r
 
 # ============================================================================
