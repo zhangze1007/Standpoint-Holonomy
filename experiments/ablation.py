@@ -3,11 +3,10 @@ LCESA Ablation Studies
 ======================
 Tests robustness of curvature signals by:
 1. Dropping model layers (keeping evenly-spaced subset)
-2. Shortening event sequences (removing middle events)
+2. Shortening event sequences (truncating from the end)
 """
-import json
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
@@ -121,6 +120,7 @@ def run_ablation_study(
     # --- Sequence length ablation ---
     for n_events in ABLATION_LENGTHS:
         if n_events > 5:
+            print(f"  Skipping sequence_length={n_events}: stimuli have only 5 events")
             continue
         print(f"  Sequence ablation: n_events={n_events}")
         for conv_id in sorted(test_activations.keys()):
