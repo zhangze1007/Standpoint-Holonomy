@@ -2,8 +2,8 @@
 LCESA Activation Extraction
 ============================
 Extract attention patterns, residual streams, and value matrices from
-transformer models using HuggingFace Transformers with device_map="auto"
-for CPU offloading (supports Llama-7b on T4 15GB VRAM).
+transformer models using HuggingFace Transformers with device_map="auto".
+Default: full precision FP16 (requires ~14GB VRAM for 7B models).
 
 Each stimulus conversation (5 events) is formatted as a multi-turn prompt,
 tokenized, and run through the model with output_attentions=True. Residual
@@ -35,10 +35,8 @@ def load_model(config: ModelConfig):
     """
     print(f"Loading model {config.name} ({config.hf_name}) ...")
 
-    # Auto-force 4-bit for large models to prevent OOM on T4
-    use_4bit = config.load_in_4bit or ("llama" in config.name.lower())
-    if use_4bit and not config.load_in_4bit:
-        print("  Auto-enabling 4-bit quantization for large model")
+    # Only use 4-bit when explicitly requested (default: full precision FP16)
+    use_4bit = config.load_in_4bit
 
     model_kwargs = {
         "device_map": "auto",
