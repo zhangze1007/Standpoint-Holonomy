@@ -2,13 +2,16 @@
 LCESA Activation Extraction
 ============================
 Extract attention patterns, residual streams, and value matrices from
-transformer models using TransformerLens.
+transformer models using HuggingFace Transformers with device_map="auto"
+for CPU offloading (supports Llama-7b on T4 15GB VRAM).
 
 Each stimulus conversation (5 events) is formatted as a multi-turn prompt,
-tokenized, and run through the model with caching enabled. The resulting
-activations are aggregated into per-conversation tensors and saved to disk.
+tokenized, and run through the model with output_attentions=True. Residual
+streams are captured via forward hooks. Results are aggregated into per-
+conversation tensors and saved to disk.
 """
 
+import gc
 import json
 import sys
 from pathlib import Path
@@ -16,56 +19,94 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 import torch
-from transformer_lens import HookedTransformer
+from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 
 from experiments.config import CACHE_DIR, MODELS, ModelConfig
 
 
 # ---------------------------------------------------------------------------
-# Model loading
+# Model loading (HuggingFace with device_map for CPU offloading)
 # ---------------------------------------------------------------------------
 
-def load_model(config: ModelConfig) -> HookedTransformer:
-    """Load a pretrained HookedTransformer from the given model configuration.
+def load_model(config: ModelConfig):
+    """Load a pretrained model with device_map='auto' for CPU offloading.
 
-    Parameters
-    ----------
-    config : ModelConfig
-        Model configuration including HuggingFace name, device, and dtype.
-
-    Returns
-    -------
-    HookedTransformer
-        The loaded model in eval mode.
+    Returns (model, tokenizer) tuple.
     """
-    dtype = getattr(torch, config.dtype)
-    print(f"Loading model {config.name} ({config.hf_name}) on {config.device} ...")
+    print(f"Loading model {config.name} ({config.hf_name}) ...")
 
-    kwargs = {
-        "device": config.device,
-        "dtype": dtype,
+    # Auto-force 4-bit for large models to prevent OOM on T4
+    use_4bit = config.load_in_4bit or ("llama" in config.name.lower())
+    if use_4bit and not config.load_in_4bit:
+        print("  Auto-enabling 4-bit quantization for large model")
+
+    model_kwargs = {
+        "device_map": "auto",
+        "trust_remote_code": True,
+        "attn_implementation": "eager",  # sdpa doesn't support output_attentions
     }
 
-    # 4-bit quantization via bitsandbytes (Colab/Kaggle friendly)
-    if config.load_in_4bit:
-        try:
-            from transformers import BitsAndBytesConfig
-            kwargs["quantization_config"] = BitsAndBytesConfig(
-                load_in_4bit=True,
-                bnb_4bit_compute_dtype=dtype,
-            )
-            print("  Using 4-bit quantization")
-        except ImportError:
-            print("  Warning: bitsandbytes not available, falling back to full precision")
+    if use_4bit:
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_quant_type="nf4",
+        )
+        model_kwargs["quantization_config"] = bnb_config
+        print("  Using 4-bit quantization with CPU offloading")
+    else:
+        dtype = getattr(torch, config.dtype)
+        model_kwargs["torch_dtype"] = dtype
 
-    model = HookedTransformer.from_pretrained(
-        config.hf_name,
-        **kwargs,
-    )
+    tokenizer = AutoTokenizer.from_pretrained(config.hf_name, trust_remote_code=True)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    model = AutoModelForCausalLM.from_pretrained(config.hf_name, **model_kwargs)
     model.eval()
-    print(f"  Model loaded: {model.cfg.n_layers} layers, "
-          f"{model.cfg.n_heads} heads, d_model={model.cfg.d_model}")
-    return model
+
+    # Report device map
+    if hasattr(model, "hf_device_map"):
+        devices = set(model.hf_device_map.values())
+        print(f"  Model loaded across devices: {devices}")
+    n_layers = getattr(model.config, "num_hidden_layers", getattr(model.config, "n_layer", "?"))
+    n_heads = getattr(model.config, "num_attention_heads", getattr(model.config, "n_head", "?"))
+    d_model = getattr(model.config, "hidden_size", getattr(model.config, "n_embd", "?"))
+    print(f"  Architecture: {n_layers} layers, {n_heads} heads, d_model={d_model}")
+
+    return model, tokenizer
+
+
+# ---------------------------------------------------------------------------
+# Model architecture helpers
+# ---------------------------------------------------------------------------
+
+def _get_transformer_layers(model):
+    """Get the list of transformer decoder layers, handling different architectures."""
+    # Llama / Mistral / most modern models
+    if hasattr(model, "model") and hasattr(model.model, "layers"):
+        return model.model.layers
+    # GPT-2
+    if hasattr(model, "transformer") and hasattr(model.transformer, "h"):
+        return model.transformer.h
+    # GPT-Neo / GPT-J
+    if hasattr(model, "transformer") and hasattr(model.transformer, "layers"):
+        return model.transformer.layers
+    # OPT
+    if hasattr(model, "model") and hasattr(model.model, "decoder") and hasattr(model.model.decoder, "layers"):
+        return model.model.decoder.layers
+    raise ValueError(f"Cannot find transformer layers in model type {type(model).__name__}")
+
+
+def _get_attn_module(layer):
+    """Get the attention module from a transformer layer."""
+    if hasattr(layer, "self_attn"):
+        return layer.self_attn  # Llama, Mistral
+    if hasattr(layer, "attn"):
+        return layer.attn  # GPT-2
+    if hasattr(layer, "attention"):
+        return layer.attention  # OPT
+    raise ValueError(f"Cannot find attention module in layer type {type(layer).__name__}")
 
 
 # ---------------------------------------------------------------------------
@@ -73,54 +114,27 @@ def load_model(config: ModelConfig) -> HookedTransformer:
 # ---------------------------------------------------------------------------
 
 def _format_event(event: dict) -> str:
-    """Format a single conversation event into a string suitable for tokenization.
-
-    User events are wrapped with ``[INST]`` / ``[/INST]`` markers (matching the
-    Llama-2-chat convention used by most chat models supported here).  Assistant
-    events are emitted verbatim since they represent model output.
-    """
+    """Format a single conversation event for tokenization."""
     if event["role"] == "user":
         return f"[INST] {event['content']} [/INST] "
     else:
         return event["content"]
 
 
-def _tokenize_events(
-    model: HookedTransformer,
-    events: List[dict],
-) -> Tuple[torch.Tensor, List[Tuple[int, int]]]:
-    """Tokenize all events in a conversation and track per-event token ranges.
-
-    Parameters
-    ----------
-    model : HookedTransformer
-        The model whose tokenizer to use.
-    events : list of dict
-        The conversation events (each with ``role`` and ``content`` keys).
-
-    Returns
-    -------
-    tokens : torch.Tensor
-        Shape ``(1, n_tokens)`` — the full token sequence for the conversation.
-    event_token_ranges : list of (int, int)
-        ``(start, end)`` token indices for each event.  ``end`` is exclusive.
-    """
+def _tokenize_events(tokenizer, events: List[dict], device=None):
+    """Tokenize all events and track per-event token ranges."""
     all_token_ids: List[int] = []
     event_token_ranges: List[Tuple[int, int]] = []
 
     for event in events:
         text = _format_event(event)
-        # prepend_bos=False because we handle BOS once for the whole conversation
-        event_tokens = model.to_tokens(text, prepend_bos=False)
-        # event_tokens shape: (1, n_event_tokens)
-        event_token_ids = event_tokens[0].tolist()
-
+        event_tokens = tokenizer.encode(text, add_special_tokens=False)
         start = len(all_token_ids)
-        all_token_ids.extend(event_token_ids)
+        all_token_ids.extend(event_tokens)
         end = len(all_token_ids)
         event_token_ranges.append((start, end))
 
-    tokens = torch.tensor([all_token_ids], device=model.cfg.device)
+    tokens = torch.tensor([all_token_ids], device=device if device else "cpu")
     return tokens, event_token_ranges
 
 
@@ -129,29 +143,12 @@ def _tokenize_events(
 # ---------------------------------------------------------------------------
 
 def extract_attention_for_conversation(
-    model: HookedTransformer,
+    model,
+    tokenizer,
     conversation: dict,
     model_config: ModelConfig,
 ) -> Dict[str, np.ndarray]:
-    """Extract activations for a single 5-event conversation.
-
-    Parameters
-    ----------
-    model : HookedTransformer
-        The loaded model.
-    conversation : dict
-        Must contain an ``events`` list of 5 dicts with ``role`` and ``content``.
-    model_config : ModelConfig
-        Model dimensions (used for sizing output arrays).
-
-    Returns
-    -------
-    dict with keys:
-        ``attention``       — (n_layers, n_heads, n_events, n_events) float32
-        ``residuals``       — (n_events, n_layers, d_model) float32
-        ``value_matrices``  — (n_layers, n_heads, d_model, d_head) float32
-        ``event_token_ranges`` — list of (start, end) tuples
-    """
+    """Extract activations for a single 5-event conversation."""
     events = conversation["events"]
     n_events = len(events)
     n_layers = model_config.n_layers
@@ -159,80 +156,102 @@ def extract_attention_for_conversation(
     d_model = model_config.d_model
     d_head = model_config.d_head
 
-    # -- tokenize ----------------------------------------------------------
-    tokens, event_token_ranges = _tokenize_events(model, events)
+    # -- tokenize -----------------------------------------------------------
+    # Place tokens on same device as the embedding layer (first model parameter)
+    embed_device = next(model.parameters()).device
+    tokens, event_token_ranges = _tokenize_events(tokenizer, events, device=embed_device)
 
-    # -- build names_filter for the cache ----------------------------------
-    def names_filter(name: str) -> bool:
-        return "hook_resid_post" in name or "hook_pattern" in name
-
-    # -- forward pass with cache -------------------------------------------
-    with torch.no_grad():
-        _, cache = model.run_with_cache(tokens, names_filter=names_filter)
-
-    # -- extract attention patterns ----------------------------------------
-    # shape target: (n_layers, n_heads, n_events, n_events)
+    # -- pre-allocate output arrays (CPU only) -----------------------------
     attention = np.zeros((n_layers, n_heads, n_events, n_events), dtype=np.float32)
-
-    for layer in range(n_layers):
-        # cache key for attention pattern
-        pattern_key = f"blocks.{layer}.attn.hook_pattern"
-        if pattern_key not in cache:
-            # try alternative naming conventions
-            alt_keys = [
-                f"blocks.{layer}.attn.hook_attn",
-                f"blocks.{layer}.attn.attn",
-            ]
-            found = False
-            for alt in alt_keys:
-                if alt in cache:
-                    pattern_key = alt
-                    found = True
-                    break
-            if not found:
-                raise KeyError(
-                    f"Could not find attention pattern in cache for layer {layer}. "
-                    f"Available keys: {[k for k in cache.keys() if 'attn' in k]}"
-                )
-
-        # pattern shape: (1, n_heads, seq_len_q, seq_len_k)
-        pattern = cache[pattern_key][0].cpu().numpy()  # (n_heads, seq_q, seq_k)
-
-        for i in range(n_events):
-            q_start, q_end = event_token_ranges[i]
-            for j in range(n_events):
-                k_start, k_end = event_token_ranges[j]
-                # mean attention from tokens of event i to tokens of event j
-                attn_block = pattern[:, q_start:q_end, k_start:k_end]
-                if attn_block.size > 0:
-                    attention[:, :, i, j] = attn_block.mean(axis=(1, 2))
-
-    # -- extract residual streams ------------------------------------------
-    # shape target: (n_events, n_layers, d_model)
     residuals = np.zeros((n_events, n_layers, d_model), dtype=np.float32)
 
-    for layer in range(n_layers):
-        resid_key = f"blocks.{layer}.hook_resid_post"
-        if resid_key not in cache:
-            raise KeyError(
-                f"Could not find residual stream in cache for layer {layer}. "
-                f"Available keys: {[k for k in cache.keys() if 'resid' in k]}"
-            )
-        # resid shape: (1, seq_len, d_model)
-        resid = cache[resid_key][0].cpu().numpy()
+    # -- register hooks for residual streams -------------------------------
+    layers = _get_transformer_layers(model)
+    hook_handles = []
 
-        for i in range(n_events):
-            # take the residual at the last token of each event
-            _, event_end = event_token_ranges[i]
-            last_token_idx = event_end - 1
-            residuals[i, layer, :] = resid[last_token_idx, :]
+    def _make_resid_hook(layer_idx: int):
+        def hook_fn(module, input, output):
+            # output is the layer output tensor: (batch, seq_len, d_model)
+            # or a tuple where first element is the output tensor
+            if isinstance(output, tuple):
+                hidden = output[0]
+            else:
+                hidden = output
+            # Extract last-token per event immediately to CPU
+            for i in range(n_events):
+                _, event_end = event_token_ranges[i]
+                residuals[i, layer_idx, :] = hidden[0, event_end - 1, :].detach().cpu().float().numpy()
+        return hook_fn
+
+    for layer_idx in range(min(n_layers, len(layers))):
+        handle = layers[layer_idx].register_forward_hook(_make_resid_hook(layer_idx))
+        hook_handles.append(handle)
+
+    # -- forward pass with output_attentions=True --------------------------
+    try:
+        with torch.no_grad():
+            outputs = model(
+                tokens,
+                output_attentions=True,
+                use_cache=False,
+            )
+
+        # -- extract attention patterns from model output ------------------
+        # outputs.attentions is a tuple of (batch, heads, seq, seq) per layer
+        if outputs.attentions is not None:
+            for layer_idx, attn_weights in enumerate(outputs.attentions):
+                if layer_idx >= n_layers:
+                    break
+                # attn_weights shape: (batch=1, n_heads, seq_q, seq_k)
+                pat = attn_weights[0]  # (n_heads, seq_q, seq_k)
+                for i in range(n_events):
+                    q_s, q_e = event_token_ranges[i]
+                    for j in range(n_events):
+                        k_s, k_e = event_token_ranges[j]
+                        block = pat[:, q_s:q_e, k_s:k_e]
+                        if block.numel() > 0:
+                            attention[layer_idx, :, i, j] = block.mean(dim=(1, 2)).cpu().float().numpy()
+                del attn_weights
+            del outputs.attentions
+
+    finally:
+        # Remove all hooks
+        for handle in hook_handles:
+            handle.remove()
+        del hook_handles
+
+    # -- free tokens and GPU memory ----------------------------------------
+    del tokens, outputs
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
     # -- extract value matrices from model weights -------------------------
-    # shape: (n_layers, n_heads, d_model, d_head)
     value_matrices = np.zeros((n_layers, n_heads, d_model, d_head), dtype=np.float32)
-    for layer in range(n_layers):
-        w_v = model.blocks[layer].attn.W_V.detach().cpu().numpy()
-        value_matrices[layer, :, :, :] = w_v
+    for layer_idx in range(min(n_layers, len(layers))):
+        attn = _get_attn_module(layers[layer_idx])
+        # Get V projection weight
+        if hasattr(attn, "v_proj"):
+            w_v = attn.v_proj.weight.detach().cpu().float().numpy()  # (d_model, d_model) or (d_model, n_heads*d_head)
+        elif hasattr(attn, "V"):
+            w_v = attn.V.weight.detach().cpu().float().numpy()
+        else:
+            # Try common patterns
+            for attr_name in ["v_proj", "V", "value"]:
+                if hasattr(attn, attr_name):
+                    proj = getattr(attn, attr_name)
+                    if hasattr(proj, "weight"):
+                        w_v = proj.weight.detach().cpu().float().numpy()
+                        break
+            else:
+                # Fallback: skip value matrices for this layer
+                continue
+
+        # Reshape to (n_heads, d_model, d_head) if needed
+        if w_v.shape == (d_model, d_model):
+            w_v = w_v.reshape(d_model, n_heads, d_head).transpose(1, 0, 2)
+        elif w_v.shape == (n_heads * d_head, d_model):
+            w_v = w_v.reshape(n_heads, d_head, d_model).transpose(0, 2, 1)
+        value_matrices[layer_idx, :, :, :] = w_v
 
     return {
         "attention": attention,
@@ -251,38 +270,26 @@ def extract_all(
     model_name: str,
     output_dir: Path = CACHE_DIR,
 ) -> Path:
-    """Extract activations for every conversation in the stimuli file.
-
-    Parameters
-    ----------
-    stimuli_path : Path
-        Path to ``data/stimuli.json``.
-    model_name : str
-        Key into ``MODELS`` dict (e.g. ``"gpt2"``, ``"llama-7b"``).
-    output_dir : Path, optional
-        Directory under which to save the output ``.npz`` file.
-        Defaults to ``CACHE_DIR`` from config.
-
-    Returns
-    -------
-    Path
-        Path to the saved ``activations.npz`` file.
-    """
+    """Extract activations for every conversation in the stimuli file."""
     if model_name not in MODELS:
         raise ValueError(
             f"Unknown model '{model_name}'. Available: {list(MODELS.keys())}"
         )
 
     model_config = MODELS[model_name]
-    model = load_model(model_config)
+    model, tokenizer = load_model(model_config)
 
     print(f"Loading stimuli from {stimuli_path} ...")
     with open(stimuli_path, "r") as f:
         stimuli = json.load(f)
 
-    # Collect all arrays into a flat dict keyed by "{scenario}/{split}/{idx}/{field}"
-    arrays: Dict[str, np.ndarray] = {}
+    save_dir = output_dir / model_name
+    save_dir.mkdir(parents=True, exist_ok=True)
+    save_path = save_dir / "activations.npz"
+
+    all_arrays: Dict[str, np.ndarray] = {}
     total_conversations = 0
+    batch_count = 0
 
     for scenario in sorted(stimuli.keys()):
         scenario_data = stimuli[scenario]
@@ -290,29 +297,46 @@ def extract_all(
             conversations = scenario_data.get(split, [])
             if not conversations:
                 continue
+            batch_arrays: Dict[str, np.ndarray] = {}
             print(f"  Extracting {scenario}/{split}: {len(conversations)} conversations ...")
             for idx, conv in enumerate(conversations):
-                result = extract_attention_for_conversation(model, conv, model_config)
+                result = extract_attention_for_conversation(model, tokenizer, conv, model_config)
                 prefix = f"{scenario}/{split}/{idx}"
                 for field_name in ("attention", "residuals", "value_matrices"):
-                    arrays[f"{prefix}/{field_name}"] = result[field_name]
-                # store event_token_ranges as a structured array of (start, end) pairs
+                    batch_arrays[f"{prefix}/{field_name}"] = result[field_name]
                 ranges = result["event_token_ranges"]
-                arrays[f"{prefix}/event_token_ranges"] = np.array(
+                batch_arrays[f"{prefix}/event_token_ranges"] = np.array(
                     ranges, dtype=np.int64
                 )
+                del result
                 total_conversations += 1
                 if total_conversations % 10 == 0:
                     print(f"    ... processed {total_conversations} conversations")
+                # Per-conversation GPU cleanup
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
 
-    # -- save ---------------------------------------------------------------
-    save_dir = output_dir / model_name
-    save_dir.mkdir(parents=True, exist_ok=True)
-    save_path = save_dir / "activations.npz"
+            # Save this batch to a temp file
+            batch_path = save_dir / f"_batch_{batch_count}.npz"
+            np.savez_compressed(batch_path, **batch_arrays)
+            batch_count += 1
+            del batch_arrays
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
 
-    print(f"Saving {len(arrays)} arrays ({total_conversations} conversations) "
+    # Merge all batch files into one final file
+    print(f"Merging {batch_count} batch files ...")
+    for i in range(batch_count):
+        batch_path = save_dir / f"_batch_{i}.npz"
+        with np.load(batch_path) as data:
+            for key in data:
+                all_arrays[key] = data[key]
+        batch_path.unlink()
+
+    print(f"Saving {len(all_arrays)} arrays ({total_conversations} conversations) "
           f"to {save_path} ...")
-    np.savez_compressed(save_path, **arrays)
+    np.savez_compressed(save_path, **all_arrays)
     print(f"Done. Output saved to {save_path}")
     return save_path
 
