@@ -27,12 +27,13 @@ FIGURES_DIR = RESULTS_DIR / "figures"
 # ============================================================================
 # Scenario types and failure layer mapping
 # ============================================================================
-SCENARIO_TYPES = ["T1", "T2", "T3", "T4", "T5"]
+SCENARIO_TYPES = ["T0", "T1", "T2", "T3", "T4", "T5"]
 
 # Maps each scenario to its target failure layer.
-# T1 is baseline (no targeted failure), so its layer is None.
+# T0 is negative control (pure factual Q&A), T1 is baseline (acknowledged revision).
 FAILURE_LAYERS = {
-    "T1": None,   # baseline
+    "T0": None,   # negative control — pure factual Q&A, no challenge
+    "T1": None,   # baseline — acknowledged revision
     "T2": "nar",  # narrative layer failure
     "T3": "mor",  # moral layer failure
     "T4": "soc",  # social layer failure
