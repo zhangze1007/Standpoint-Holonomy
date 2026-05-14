@@ -34,6 +34,8 @@ def run_attention_entropy(
     results = []
     for key in data.files:
         parts = key.rsplit("/", 1)
+        if len(parts) < 2:
+            continue  # skip top-level keys like "value_matrices"
         conv_id = parts[0]
         field = parts[1]
 

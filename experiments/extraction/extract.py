@@ -147,17 +147,12 @@ def extract_attention_for_conversation(
     tokenizer,
     conversation: dict,
     model_config: ModelConfig,
-    extract_values: bool = True,
 ) -> Dict[str, np.ndarray]:
     """Extract activations for a single 5-event conversation.
 
-    Optimized: vectorized attention + batched residuals.
-
-    Parameters
-    ----------
-    extract_values : bool
-        If True, extract value matrices from model weights.
-        Set to False for subsequent conversations (value matrices are constant).
+    Returns attention patterns and residual streams. Value matrices are
+    extracted separately via ``extract_value_matrices()`` (they are constant
+    across conversations).
     """
     events = conversation["events"]
     n_events = len(events)
@@ -238,41 +233,11 @@ def extract_attention_for_conversation(
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-    # -- extract value matrices from model weights (ONCE per run) ----------
-    value_matrices = None
-    if extract_values:
-        value_matrices = np.zeros((n_layers, n_heads, d_model, d_head), dtype=np.float32)
-        for layer_idx in range(min(n_layers, len(layers))):
-            attn = _get_attn_module(layers[layer_idx])
-            w_v = None
-            if hasattr(attn, "v_proj"):
-                w_v = attn.v_proj.weight.detach().cpu().float().numpy()
-            elif hasattr(attn, "V"):
-                w_v = attn.V.weight.detach().cpu().float().numpy()
-            else:
-                for attr_name in ["v_proj", "V", "value"]:
-                    if hasattr(attn, attr_name):
-                        proj = getattr(attn, attr_name)
-                        if hasattr(proj, "weight"):
-                            w_v = proj.weight.detach().cpu().float().numpy()
-                            break
-
-            if w_v is not None:
-                if w_v.shape == (d_model, d_model):
-                    w_v = w_v.reshape(d_model, n_heads, d_head).transpose(1, 0, 2)
-                elif w_v.shape == (n_heads * d_head, d_model):
-                    w_v = w_v.reshape(n_heads, d_head, d_model).transpose(0, 2, 1)
-                value_matrices[layer_idx, :, :, :] = w_v
-
-    result = {
+    return {
         "attention": attention,
         "residuals": residuals,
         "event_token_ranges": np.array(event_token_ranges, dtype=np.int64),
     }
-    if value_matrices is not None:
-        result["value_matrices"] = value_matrices
-
-    return result
 
 
 # ---------------------------------------------------------------------------
@@ -304,10 +269,19 @@ def extract_value_matrices(
     for layer_idx in range(min(n_layers, len(layers))):
         attn = _get_attn_module(layers[layer_idx])
         w_v = None
+
+        # Try separate v_proj first (Llama, Mistral, etc.)
         if hasattr(attn, "v_proj"):
             w_v = attn.v_proj.weight.detach().cpu().float().numpy()
         elif hasattr(attn, "V"):
             w_v = attn.V.weight.detach().cpu().float().numpy()
+        # GPT-2 style: combined QKV projection c_attn with shape (d_model, 3*d_model)
+        elif hasattr(attn, "c_attn") and hasattr(attn, "split_size"):
+            c_attn_weight = attn.c_attn.weight.detach().cpu().float().numpy()
+            # split_size is the per-component size (d_model for GPT-2)
+            split = attn.split_size if isinstance(attn.split_size, int) else attn.split_size[2]
+            # V is the last component: columns [2*split : 3*split]
+            w_v = c_attn_weight[:, 2 * split: 3 * split]
         else:
             for attr_name in ["v_proj", "V", "value"]:
                 if hasattr(attn, attr_name):
@@ -321,6 +295,8 @@ def extract_value_matrices(
                 w_v = w_v.reshape(d_model, n_heads, d_head).transpose(1, 0, 2)
             elif w_v.shape == (n_heads * d_head, d_model):
                 w_v = w_v.reshape(n_heads, d_head, d_model).transpose(0, 2, 1)
+            elif w_v.shape == (d_model, n_heads * d_head):
+                w_v = w_v.reshape(d_model, n_heads, d_head).transpose(1, 0, 2)
             value_matrices[layer_idx, :, :, :] = w_v
 
     save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -407,19 +383,14 @@ def extract_all(
         print(f"  Extracting {scenario}/{split}: {len(conversations)} conversations ...")
 
         for idx, conv in enumerate(conversations):
-            # Only extract value matrices once (skip if already saved)
-            extract_values = (not values_path.exists() and processed == 0 and batch_count == 0)
             result = extract_attention_for_conversation(
                 model, tokenizer, conv, model_config,
-                extract_values=extract_values,
             )
 
             prefix = f"{scenario}/{split}/{idx}"
             for field_name in ("attention", "residuals"):
                 batch_arrays[f"{prefix}/{field_name}"] = result[field_name]
             batch_arrays[f"{prefix}/event_token_ranges"] = result["event_token_ranges"]
-            if "value_matrices" in result:
-                batch_arrays[f"{prefix}/value_matrices"] = result["value_matrices"]
             del result
 
             processed += 1

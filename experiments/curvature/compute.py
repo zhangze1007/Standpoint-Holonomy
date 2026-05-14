@@ -241,6 +241,7 @@ def compute_baseline_transport(
     scenario: str,
     layer: int,
     gamma: np.ndarray,
+    value_matrices: np.ndarray,
 ) -> np.ndarray:
     """Compute the mean transport product U_12 @ U_23 for T1 test conversations.
 
@@ -250,13 +251,15 @@ def compute_baseline_transport(
     Parameters
     ----------
     test_activations : dict
-        ``{conv_id: {"attention": ..., "value_matrices": ..., ...}}`` —
+        ``{conv_id: {"attention": ..., ...}}`` —
         reorganised activations for the test split.  Only T1 entries are used.
     scenario : str
         The scenario identifier (used for logging; the function always filters
         for T1 conversations).
     layer : int
         Model layer index at which to evaluate transport operators.
+    value_matrices : np.ndarray
+        Shared value projection weights ``(n_layers, n_heads, d_model, d_head)``.
 
     Returns
     -------
@@ -272,7 +275,7 @@ def compute_baseline_transport(
             continue
 
         attn = fields["attention"]
-        V = fields["value_matrices"]
+        V = value_matrices
 
         # Events 1->2 (indices 0->1) and 2->3 (indices 1->2) in a 5-event conv
         U_12 = compute_transport_operator(attn, V, gamma, 0, 1, layer)
@@ -350,6 +353,8 @@ def run_curvature_computation(
 
     for key in raw.files:
         parts = key.rsplit("/", 1)
+        if len(parts) < 2:
+            continue  # skip top-level keys like "value_matrices"
         conv_id, field = parts[0], parts[1]
         # Only process test split
         if "/test/" not in conv_id:
@@ -393,7 +398,7 @@ def run_curvature_computation(
 
     for layer in range(n_layers):
         # Compute baseline transport from T1 test conversations at this layer
-        U_exp = compute_baseline_transport(test_activations, "T1", layer, gamma)
+        U_exp = compute_baseline_transport(test_activations, "T1", layer, gamma, sample_V)
 
         # Compute gamma-aligned projection bases for this layer
         proj_bases = compute_projection_bases(sample_V, gamma, layer)

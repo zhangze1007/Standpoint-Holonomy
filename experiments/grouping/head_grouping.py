@@ -82,6 +82,11 @@ def assign_heads_to_layers(
     """Assign each attention head to the standpoint layer with the largest
     absolute differential.
 
+    Each delta matrix is z-score normalized (across heads, per model layer)
+    before comparison, so that layers with different baseline magnitudes
+    (e.g. the internal T1 split vs cross-scenario differentials) contribute
+    equally to the assignment.
+
     Parameters
     ----------
     deltas : dict
@@ -100,8 +105,19 @@ def assign_heads_to_layers(
     # Mean over model layers → (n_standpoint_layers, n_heads)
     mean_over_layers = stacked.mean(axis=1)
 
-    # For each head, pick the standpoint layer with largest |delta|
-    gamma = np.argmax(np.abs(mean_over_layers), axis=0)  # (n_heads,)
+    # Z-score normalize each standpoint layer's differential across heads
+    # so that layers with different baseline magnitudes are comparable.
+    normalized = np.zeros_like(mean_over_layers)
+    for k in range(mean_over_layers.shape[0]):
+        row = mean_over_layers[k]
+        std = row.std()
+        if std > 1e-12:
+            normalized[k] = (row - row.mean()) / std
+        else:
+            normalized[k] = row - row.mean()
+
+    # For each head, pick the standpoint layer with largest |normalized delta|
+    gamma = np.argmax(np.abs(normalized), axis=0)  # (n_heads,)
     return gamma
 
 
@@ -247,6 +263,8 @@ def run_head_grouping(
     conv_ids_seen: set = set()
     for key in raw.files:
         parts = key.rsplit("/", 1)
+        if len(parts) < 2:
+            continue  # skip top-level keys like "value_matrices"
         conv_id, field = parts[0], parts[1]
         conv_ids_seen.add(conv_id)
 

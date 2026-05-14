@@ -63,7 +63,7 @@ def load_curvature_results(
 # H1: Block specificity
 # ---------------------------------------------------------------------------
 
-def h1_block_specificity(df: pd.DataFrame) -> dict:
+def h1_block_specificity(df: pd.DataFrame, model_name: str = "gpt2") -> dict:
     """Test H1: curvature is block-specific to the target failure layer.
 
     For each scenario T2-T5, compute the ratio::
@@ -81,6 +81,8 @@ def h1_block_specificity(df: pd.DataFrame) -> dict:
     ----------
     df : pd.DataFrame
         Curvature results (from :func:`load_curvature_results`).
+    model_name : str
+        Model key (e.g. ``"gpt2"``) for locating grouping results.
 
     Returns
     -------
@@ -91,7 +93,7 @@ def h1_block_specificity(df: pd.DataFrame) -> dict:
     from experiments.config import FAILURE_LAYERS, DATA_DIR
 
     # Load head assignments (gamma) if available
-    gamma_path = DATA_DIR / "gpt2_grouping.npz"
+    gamma_path = DATA_DIR / f"{model_name}_grouping.npz"
     head_counts = {}
     if gamma_path.exists():
         gamma = np.load(gamma_path)["gamma"]
@@ -221,10 +223,10 @@ def _bootstrap_ci(
 
 
 def h2_baseline_near_zero(df: pd.DataFrame) -> dict:
-    """Test H2: T1 (baseline) curvature is near zero.
+    """Test H2: baseline (T0+T1) curvature is near zero.
 
-    Compares T1 curvature (``curvature_total``) against failure-scenario
-    curvature using a Mann-Whitney U test (alternative="less").
+    Compares baseline curvature (``curvature_total``) against failure-scenario
+    curvature (T2-T5) using a Mann-Whitney U test (alternative="less").
     Also reports Cohen's d and 95% bootstrap CI.
 
     Parameters
@@ -237,8 +239,8 @@ def h2_baseline_near_zero(df: pd.DataFrame) -> dict:
     dict
         Test statistics, p-values, effect sizes, CIs, and pass/fail flags.
     """
-    t1_values = df.loc[df["scenario"] == "T1", "curvature_total"].dropna().values
-    failure_values = df.loc[df["scenario"] != "T1", "curvature_total"].dropna().values
+    t1_values = df.loc[df["scenario"].isin(["T0", "T1"]), "curvature_total"].dropna().values
+    failure_values = df.loc[df["scenario"].isin(["T2", "T3", "T4", "T5"]), "curvature_total"].dropna().values
 
     if len(t1_values) == 0 or len(failure_values) == 0:
         return {"error": "insufficient data"}
@@ -555,10 +557,10 @@ def h6_diagnostic_superiority(
     """
     # Curvature: mean total curvature for failure scenarios
     failure_curv = curvature_df.loc[
-        curvature_df["scenario"] != "T1", "curvature_total"
+        curvature_df["scenario"].isin(["T2", "T3", "T4", "T5"]), "curvature_total"
     ].dropna().values
     t1_curv = curvature_df.loc[
-        curvature_df["scenario"] == "T1", "curvature_total"
+        curvature_df["scenario"].isin(["T0", "T1"]), "curvature_total"
     ].dropna().values
 
     if len(failure_curv) == 0 or len(t1_curv) == 0:
@@ -638,7 +640,7 @@ def run_all_tests(
     all_results = {}
 
     print("Running H1: Block specificity ...")
-    all_results["H1"] = h1_block_specificity(curvature_df)
+    all_results["H1"] = h1_block_specificity(curvature_df, model_name=model_name)
 
     print("Running H2: Baseline near zero ...")
     all_results["H2"] = h2_baseline_near_zero(curvature_df)

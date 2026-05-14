@@ -16,7 +16,7 @@ def run_linear_probing(
     activations_path: Path,
     output_dir: Path = RESULTS_DIR,
 ) -> pd.DataFrame:
-    """Train linear probes per layer: binary (T1 vs rest) AND 5-way multi-class."""
+    """Train linear probes per layer: binary (T0+T1 vs T2-T5) AND multi-class."""
     config = MODELS[model_name]
     data = np.load(activations_path, allow_pickle=True)
 
@@ -28,6 +28,8 @@ def run_linear_probing(
 
     for key in data.files:
         parts = key.rsplit("/", 1)
+        if len(parts) < 2:
+            continue  # skip top-level keys like "value_matrices"
         conv_id = parts[0]
         field = parts[1]
 
@@ -43,7 +45,7 @@ def run_linear_probing(
         for layer in range(config.n_layers):
             X_by_layer[layer].append(final_residual[layer])
 
-        y_binary.append(0 if scenario == "T1" else 1)
+        y_binary.append(0 if scenario in ("T0", "T1") else 1)
         y_multi.append(scenario_to_int[scenario])
 
     y_bin = np.array(y_binary)
@@ -73,7 +75,7 @@ def run_linear_probing(
             "baseline": "linear_probing",
         })
 
-        # Multi-class probe: 5-way scenario classification (macro F1)
+        # Multi-class probe: 6-way scenario classification (macro F1)
         multi_scores = cross_val_score(pipe, X, y_mul, cv=cv, scoring="f1_macro")
         results.append({
             "model": model_name,

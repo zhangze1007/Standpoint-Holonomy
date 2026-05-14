@@ -61,6 +61,8 @@ def run_ablation_study(
     conv_ids_seen: set = set()
     for key in raw.files:
         parts = key.rsplit("/", 1)
+        if len(parts) < 2:
+            continue  # skip top-level keys like "value_matrices"
         conv_id, field = parts[0], parts[1]
         if "/test/" not in conv_id:
             continue
@@ -73,7 +75,7 @@ def run_ablation_study(
                 fields[field] = raw[full_key]
         test_activations[conv_id] = fields
 
-    # Load shared value_matrices (top-level key first, then per-conversation)
+    # Load shared value_matrices (top-level key)
     shared_V = None
     if "value_matrices" in raw.files:
         shared_V = raw["value_matrices"]
@@ -82,40 +84,44 @@ def run_ablation_study(
             if key.endswith("/value_matrices"):
                 shared_V = raw[key]
                 break
-    # Inject shared V into all conversations
-    for fields in test_activations.values():
-        if shared_V is not None:
-            fields["value_matrices"] = shared_V
 
     rows = []
+
+    # Find a T1 test conversation for baseline (same for all ablations)
+    t1_fields = next(
+        (v for k, v in test_activations.items() if k.startswith("T1/")),
+        None,
+    )
+    if t1_fields is None:
+        raise ValueError("No T1 test conversations found for ablation baseline.")
 
     # --- Layer ablation ---
     for n_keep in ABLATION_LAYER_COUNTS:
         if n_keep > model_config.n_layers:
             continue
         print(f"  Layer ablation: n_keep={n_keep}")
+        attn_abl_t1, V_abl = ablate_layers(t1_fields["attention"], shared_V, n_keep)
+        gamma_adj = gamma[:V_abl.shape[1]]
+
+        # Pre-compute baselines and projection bases per layer (shared across convs)
+        baselines = {}
+        proj_bases_cache = {}
+        for layer in range(n_keep):
+            U_exp = compute_baseline_transport(
+                {"T1/tmp": {"attention": attn_abl_t1}},
+                "T1", layer, gamma_adj, V_abl,
+            )
+            baselines[layer] = U_exp
+            proj_bases_cache[layer] = compute_projection_bases(V_abl, gamma_adj, layer)
+
         for conv_id in sorted(test_activations.keys()):
             fields = test_activations[conv_id]
-            attn_abl, V_abl = ablate_layers(fields["attention"], fields["value_matrices"], n_keep)
-            gamma_adj = gamma[:attn_abl.shape[1]]
-
-            t1_fields = next(
-                (v for k, v in test_activations.items() if k.startswith("T1/")),
-                None,
-            )
-            if t1_fields is None:
-                continue
-            t1_attn, t1_V = ablate_layers(t1_fields["attention"], t1_fields["value_matrices"], n_keep)
+            attn_abl, _ = ablate_layers(fields["attention"], shared_V, n_keep)
 
             for layer in range(n_keep):
-                U_exp = compute_baseline_transport(
-                    {"T1/tmp": {"attention": t1_attn, "value_matrices": t1_V}},
-                    "T1", layer, gamma_adj,
-                )
-                proj_bases = compute_projection_bases(V_abl, gamma_adj, layer)
                 U_12 = compute_transport_operator(attn_abl, V_abl, gamma_adj, 0, 1, layer)
                 U_23 = compute_transport_operator(attn_abl, V_abl, gamma_adj, 1, 2, layer)
-                _, block_norms = compute_curvature(U_12, U_23, U_exp, proj_bases)
+                _, block_norms = compute_curvature(U_12, U_23, baselines[layer], proj_bases_cache[layer])
 
                 scenario = conv_id.split("/")[0]
                 row = {
@@ -137,29 +143,28 @@ def run_ablation_study(
             print(f"  Skipping sequence_length={n_events}: stimuli have only 5 events")
             continue
         print(f"  Sequence ablation: n_events={n_events}")
+        t1_attn_abl = ablate_sequence_length(t1_fields["attention"], n_events)
+
+        # Pre-compute baselines and projection bases per layer
+        baselines = {}
+        proj_bases_cache = {}
+        for layer in range(model_config.n_layers):
+            U_exp = compute_baseline_transport(
+                {"T1/tmp": {"attention": t1_attn_abl}},
+                "T1", layer, gamma, shared_V,
+            )
+            baselines[layer] = U_exp
+            proj_bases_cache[layer] = compute_projection_bases(shared_V, gamma, layer)
+
         for conv_id in sorted(test_activations.keys()):
             fields = test_activations[conv_id]
             attn_abl = ablate_sequence_length(fields["attention"], n_events)
-            V_full = fields["value_matrices"]
-
-            t1_fields = next(
-                (v for k, v in test_activations.items() if k.startswith("T1/")),
-                None,
-            )
-            if t1_fields is None:
-                continue
-            t1_attn_abl = ablate_sequence_length(t1_fields["attention"], n_events)
 
             for layer in range(model_config.n_layers):
-                U_exp = compute_baseline_transport(
-                    {"T1/tmp": {"attention": t1_attn_abl, "value_matrices": t1_fields["value_matrices"]}},
-                    "T1", layer, gamma,
-                )
-                proj_bases = compute_projection_bases(V_full, gamma, layer)
-                U_12 = compute_transport_operator(attn_abl, V_full, gamma, 0, 1, layer)
+                U_12 = compute_transport_operator(attn_abl, shared_V, gamma, 0, 1, layer)
                 last_event = min(2, n_events - 1)
-                U_23 = compute_transport_operator(attn_abl, V_full, gamma, 1, last_event, layer)
-                _, block_norms = compute_curvature(U_12, U_23, U_exp, proj_bases)
+                U_23 = compute_transport_operator(attn_abl, shared_V, gamma, 1, last_event, layer)
+                _, block_norms = compute_curvature(U_12, U_23, baselines[layer], proj_bases_cache[layer])
 
                 scenario = conv_id.split("/")[0]
                 row = {

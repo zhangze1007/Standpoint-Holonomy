@@ -71,7 +71,7 @@ def main():
         print(f"--- {scenario} ---")
         t0 = time.time()
         result = extract_attention_for_conversation(
-            model, tokenizer, conv, model_config, extract_values=False,
+            model, tokenizer, conv, model_config,
         )
         elapsed = time.time() - t0
 
