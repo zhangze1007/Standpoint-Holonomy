@@ -372,13 +372,16 @@ def run_curvature_computation(
     # ------------------------------------------------------------------
     all_conv_ids = sorted(test_activations.keys())
 
-    # Pre-compute projection bases using value matrices from any conversation
-    # (they share model weights, so we use the first available)
+    # Pre-compute projection bases using value matrices
+    # Check top-level key first (optimized format), then per-conversation
     sample_V = None
-    for fields in test_activations.values():
-        if "value_matrices" in fields:
-            sample_V = fields["value_matrices"]
-            break
+    if "value_matrices" in raw.files:
+        sample_V = raw["value_matrices"]
+    else:
+        for fields in test_activations.values():
+            if "value_matrices" in fields:
+                sample_V = fields["value_matrices"]
+                break
 
     print(f"Computing curvature for {len(all_conv_ids)} test conversations "
           f"across {n_layers} layers (including T1 baseline) ...")
@@ -398,7 +401,7 @@ def run_curvature_computation(
         for conv_id in all_conv_ids:
             fields = test_activations[conv_id]
             attn = fields["attention"]
-            V = fields["value_matrices"]
+            V = sample_V  # value_matrices are model weights, same for all convs
 
             # Transport operators for events 1->2 and 2->3
             U_12 = compute_transport_operator(attn, V, gamma, 0, 1, layer)

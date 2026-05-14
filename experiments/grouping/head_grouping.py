@@ -259,11 +259,15 @@ def run_head_grouping(
         grouping_activations[conv_id] = fields
 
     # Also collect value matrices (use first available, they share weights)
+    # Check top-level key first (optimized format), then per-conversation
     value_matrices = None
-    for fields in grouping_activations.values():
-        if "value_matrices" in fields:
-            value_matrices = fields["value_matrices"]
-            break
+    if "value_matrices" in raw.files:
+        value_matrices = raw["value_matrices"]
+    else:
+        for fields in grouping_activations.values():
+            if "value_matrices" in fields:
+                value_matrices = fields["value_matrices"]
+                break
     if value_matrices is None:
         raise ValueError("No value_matrices found in activations archive.")
 

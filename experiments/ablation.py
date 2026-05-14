@@ -67,11 +67,25 @@ def run_ablation_study(
         conv_ids_seen.add(conv_id)
     for conv_id in conv_ids_seen:
         fields: Dict[str, np.ndarray] = {}
-        for field in ("attention", "residuals", "value_matrices"):
+        for field in ("attention", "residuals"):
             full_key = f"{conv_id}/{field}"
             if full_key in raw.files:
                 fields[field] = raw[full_key]
         test_activations[conv_id] = fields
+
+    # Load shared value_matrices (top-level key first, then per-conversation)
+    shared_V = None
+    if "value_matrices" in raw.files:
+        shared_V = raw["value_matrices"]
+    else:
+        for key in raw.files:
+            if key.endswith("/value_matrices"):
+                shared_V = raw[key]
+                break
+    # Inject shared V into all conversations
+    for fields in test_activations.values():
+        if shared_V is not None:
+            fields["value_matrices"] = shared_V
 
     rows = []
 
