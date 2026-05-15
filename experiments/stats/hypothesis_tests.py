@@ -605,6 +605,102 @@ def h6_diagnostic_superiority(
 
 
 # ---------------------------------------------------------------------------
+# H7: T0 anomaly — factual Q&A produces higher curvature than baseline
+# ---------------------------------------------------------------------------
+
+def h7_t0_anomaly(df: pd.DataFrame) -> dict:
+    """Test H7: T0 (factual Q&A) produces higher curvature than T1 (baseline).
+
+    This is an exploratory hypothesis motivated by the observation that
+    pure factual Q&A (no failure induction) may produce more geometrically
+    complex internal representations than challenged-but-not-failing
+    conversations.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Curvature results.
+
+    Returns
+    -------
+    dict
+        Test statistics, effect sizes, and per-layer/per-block breakdown.
+    """
+    t0_values = df.loc[df["scenario"] == "T0", "curvature_total"].dropna().values
+    t1_values = df.loc[df["scenario"] == "T1", "curvature_total"].dropna().values
+
+    if len(t0_values) == 0 or len(t1_values) == 0:
+        return {"error": "insufficient data"}
+
+    # Mann-Whitney U: T0 > T1
+    try:
+        mw_result = stats.mannwhitneyu(
+            t0_values, t1_values, alternative="greater"
+        )
+        p_value = mw_result.pvalue
+        statistic = mw_result.statistic
+    except ValueError:
+        return {"error": "Mann-Whitney U test failed"}
+
+    t0_mean = float(t0_values.mean())
+    t1_mean = float(t1_values.mean())
+    cohens_d = _cohens_d(t0_values, t1_values)  # positive = T0 > T1
+
+    # Per-layer analysis
+    blocks = ["curvature_min", "curvature_nar", "curvature_soc", "curvature_mor", "curvature_pos"]
+    per_layer = {}
+    layers = sorted(df["layer"].unique())
+    for layer in layers:
+        t0_layer = df.loc[(df["scenario"] == "T0") & (df["layer"] == layer), "curvature_total"].dropna().values
+        t1_layer = df.loc[(df["scenario"] == "T1") & (df["layer"] == layer), "curvature_total"].dropna().values
+        if len(t0_layer) > 0 and len(t1_layer) > 0:
+            mw = stats.mannwhitneyu(t0_layer, t1_layer, alternative="greater")
+            per_layer[str(layer)] = {
+                "t0_mean": float(t0_layer.mean()),
+                "t1_mean": float(t1_layer.mean()),
+                "difference": float(t0_layer.mean() - t1_layer.mean()),
+                "cohens_d": float(_cohens_d(t0_layer, t1_layer)),
+                "p_value": float(mw.pvalue),
+                "t0_gt_t1": bool(t0_layer.mean() > t1_layer.mean()),
+            }
+
+    # Per-block analysis
+    per_block = {}
+    for block in blocks:
+        t0_block = df.loc[df["scenario"] == "T0", block].dropna().values
+        t1_block = df.loc[df["scenario"] == "T1", block].dropna().values
+        if len(t0_block) > 0 and len(t1_block) > 0:
+            mw = stats.mannwhitneyu(t0_block, t1_block, alternative="greater")
+            per_block[block] = {
+                "t0_mean": float(t0_block.mean()),
+                "t1_mean": float(t1_block.mean()),
+                "difference": float(t0_block.mean() - t1_block.mean()),
+                "cohens_d": float(_cohens_d(t0_block, t1_block)),
+                "p_value": float(mw.pvalue),
+            }
+
+    # Count how many layers show T0 > T1
+    n_t0_gt_t1 = sum(1 for v in per_layer.values() if v["t0_gt_t1"])
+    passed = p_value < ALPHA
+
+    return {
+        "t0_mean": t0_mean,
+        "t1_mean": t1_mean,
+        "t0_std": float(t0_values.std()),
+        "t1_std": float(t1_values.std()),
+        "mean_difference": t0_mean - t1_mean,
+        "cohens_d": cohens_d,
+        "mann_whitney_statistic": float(statistic),
+        "p_value": float(p_value),
+        "n_layers_t0_gt_t1": n_t0_gt_t1,
+        "n_layers_total": len(per_layer),
+        "per_layer": per_layer,
+        "per_block": per_block,
+        "passed": passed,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Run all tests
 # ---------------------------------------------------------------------------
 
@@ -673,6 +769,9 @@ def run_all_tests(
         all_results["H6"] = h6_diagnostic_superiority(curvature_df, probing_df)
     else:
         all_results["H6"] = {"skipped": True, "reason": "no probing data"}
+
+    print("Running H7: T0 anomaly (factual Q&A curvature) ...")
+    all_results["H7"] = h7_t0_anomaly(curvature_df)
 
     # Summary
     summary = {}
