@@ -1,6 +1,6 @@
 """
-LCESA Transport Operators and Block-Specific Curvature
-=======================================================
+LCESA Transport Operators and Block-Specific Curvature (GPU-Accelerated)
+========================================================================
 Computes the gauge-covariant transport operators and curvature tensors
 used in the Low-Curvature Endogenous Standpoint Attractor (LCESA) framework.
 
@@ -8,6 +8,12 @@ Mathematical formulation:
     Transport operator:  U_{ij}^{(l)} = sum_k  alpha_bar_{ji}^{(k)}  P_{W_k}
     Curvature:           F_{ijk} = U_12 . U_23 . (U_13^exp)^{-1}
     Block norm:          ||F_{ijk}||_k = ||Q_k^T (F - I) Q_k||_F
+
+GPU optimizations:
+    - Pre-compute P_k projection matrices per layer (shared across conversations)
+    - Batch conversations via torch.einsum for transport operators
+    - torch.bmm for batched curvature tensor computation
+    - torch.linalg.inv for batched matrix inversion
 """
 
 import csv
@@ -16,6 +22,7 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 import numpy as np
+import torch
 
 from experiments.config import LAYER_NAMES, MODELS, CACHE_DIR, RESULTS_DIR
 
@@ -24,82 +31,13 @@ EPSILON_PROJ = 1e-6   # added to each P_k during U construction
 EPSILON_INV = 1e-4    # added to U_exp before inversion (Tikhonov)
 
 
+def _pick_device() -> torch.device:
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
 # ---------------------------------------------------------------------------
 # Core transport / curvature functions
 # ---------------------------------------------------------------------------
-
-def compute_transport_operator(
-    attention: np.ndarray,
-    value_matrices: np.ndarray,
-    gamma: np.ndarray,
-    event_from: int,
-    event_to: int,
-    layer: int,
-) -> np.ndarray:
-    """Compute the transport operator U_{ij}^{(l)} for a single model layer.
-
-    The transport operator is built by summing over standpoint layers k = 0..4:
-
-        U_{ij}^{(l)} = sum_k  alpha_bar_{ji}^{(k)}  P_{W_k}
-
-    where alpha_bar^{(k)} is the mean attention weight over heads assigned to
-    standpoint layer k, and P_{W_k} is the projection onto the value subspace
-    spanned by those heads.  A small diagonal regularization (EPSILON_PROJ) is
-    added to each P_k to prevent ill-conditioning at the source.
-
-    Parameters
-    ----------
-    attention : np.ndarray
-        Shape ``(n_layers, n_heads, n_events, n_events)`` — raw attention
-        patterns extracted from the model.
-    value_matrices : np.ndarray
-        Shape ``(n_layers, n_heads, d_model, d_head)`` — value weight matrices.
-    gamma : np.ndarray
-        Shape ``(n_heads,)`` — integer standpoint-layer assignment (0-4) for
-        each head.
-    event_from : int
-        Index of the source event (column index in attention).
-    event_to : int
-        Index of the target event (row index in attention).
-    layer : int
-        Model layer index at which to read attention and value matrices.
-
-    Returns
-    -------
-    np.ndarray
-        Shape ``(d_model, d_model)`` — the transport operator.
-    """
-    n_heads = attention.shape[1]
-    d_model = value_matrices.shape[2]
-    n_standpoint = len(LAYER_NAMES)
-
-    U = np.zeros((d_model, d_model), dtype=np.float32)
-    I_d = np.eye(d_model, dtype=np.float32)
-
-    for k in range(n_standpoint):
-        # Heads assigned to standpoint layer k
-        head_mask = np.where(gamma == k)[0]
-        if len(head_mask) == 0:
-            continue
-
-        # Mean attention from event_from to event_to over assigned heads
-        # attention[layer, head, event_to, event_from]
-        alpha_k = attention[layer, head_mask, event_to, event_from].mean()
-
-        # Projection P_k: mean of V_h @ V_h^T over assigned heads
-        # value_matrices[layer, head] is (d_model, d_head)
-        V_heads = value_matrices[layer, head_mask]  # (n_assigned, d_model, d_head)
-        # V @ V^T for each head -> (n_assigned, d_model, d_model)
-        projections = np.einsum("hij,hkj->hik", V_heads, V_heads)
-        P_k = projections.mean(axis=0)  # (d_model, d_model)
-
-        # Level 1 regularization: stabilize P_k before accumulation
-        P_k += EPSILON_PROJ * I_d
-
-        U += alpha_k * P_k
-
-    return U
-
 
 def compute_projection_bases(
     value_matrices: np.ndarray,
@@ -159,49 +97,161 @@ def compute_projection_bases(
     return bases
 
 
+def _build_P_stack(
+    value_matrices_t: torch.Tensor,
+    gamma_t: torch.Tensor,
+    layer: int,
+    device: torch.device,
+) -> torch.Tensor:
+    """Pre-compute P_k projection matrices for a given layer.
+
+    Returns shape ``(n_standpoint, d_model, d_model)`` — one P_k per
+    standpoint layer, with small diagonal regularization already added.
+    """
+    n_standpoint = len(LAYER_NAMES)
+    d_model = value_matrices_t.shape[2]
+    I_d = torch.eye(d_model, device=device, dtype=torch.float32)
+    P_list = []
+
+    for k in range(n_standpoint):
+        head_mask = torch.where(gamma_t == k)[0]
+        if len(head_mask) == 0:
+            P_list.append(EPSILON_PROJ * I_d)
+            continue
+
+        # V_heads: (n_assigned, d_model, d_head)
+        V_heads = value_matrices_t[layer, head_mask]
+        # V @ V^T for each head -> (n_assigned, d_model, d_model)
+        projections = torch.einsum("hij,hkj->hik", V_heads, V_heads)
+        P_k = projections.mean(dim=0)  # (d_model, d_model)
+        P_k = P_k + EPSILON_PROJ * I_d
+        P_list.append(P_k)
+
+    return torch.stack(P_list, dim=0)  # (n_standpoint, d_model, d_model)
+
+
+def _batched_transport(
+    attention_batch_t: torch.Tensor,
+    P_stack_t: torch.Tensor,
+    gamma_t: torch.Tensor,
+    event_from: int,
+    event_to: int,
+    layer: int,
+) -> torch.Tensor:
+    """Batched transport operator computation on GPU.
+
+    Parameters
+    ----------
+    attention_batch_t : (B, n_heads, n_events, n_events) on GPU
+    P_stack_t : (n_standpoint, d_model, d_model) on GPU
+    gamma_t : (n_heads,) on GPU
+    event_from, event_to, layer : int
+
+    Returns
+    -------
+    (B, d_model, d_model) on GPU
+    """
+    # alpha: (B, n_standpoint)
+    raw = attention_batch_t[:, :, event_to, event_from]  # (B, n_heads)
+    n_standpoint = P_stack_t.shape[0]
+    alpha = torch.stack(
+        [raw[:, gamma_t == k].mean(dim=1) for k in range(n_standpoint)],
+        dim=1,
+    )
+    # U = sum_k alpha_k * P_k  via einsum
+    return torch.einsum("ck,klm->clm", alpha, P_stack_t)
+
+
+def _batched_curvature(
+    U_12: torch.Tensor,
+    U_23: torch.Tensor,
+    U_exp_inv: torch.Tensor,
+    proj_bases: List[np.ndarray],
+    device: torch.device,
+) -> Tuple[torch.Tensor, List[np.ndarray]]:
+    """Batched curvature tensor and block norms on GPU.
+
+    Parameters
+    ----------
+    U_12, U_23, U_exp_inv : (B, d_model, d_model) on GPU
+    proj_bases : list of (d_model, rank_k) numpy arrays
+
+    Returns
+    -------
+    F : (B, d_model, d_model) on GPU
+    block_norms : list of (B,) numpy arrays
+    """
+    F = torch.bmm(torch.bmm(U_12, U_23), U_exp_inv)  # (B, d_model, d_model)
+    deviation = F - torch.eye(F.shape[1], device=device, dtype=torch.float32)
+
+    block_norms = []
+    for Q_k in proj_bases:
+        Q_t = torch.as_tensor(Q_k, device=device, dtype=torch.float32)
+        # deviation @ Q_k -> (B, d_model, rank_k)
+        # Q_k^T @ (deviation @ Q_k) -> (B, rank_k, rank_k)
+        proj_dev = torch.bmm(
+            Q_t.T.unsqueeze(0).expand(deviation.shape[0], -1, -1),
+            torch.bmm(deviation, Q_t.unsqueeze(0).expand(deviation.shape[0], -1, -1)),
+        )
+        # Frobenius norm per batch element
+        norms = torch.norm(proj_dev.reshape(proj_dev.shape[0], -1), dim=1)
+        block_norms.append(norms.cpu().numpy())
+
+    return F, block_norms
+
+
+# ---------------------------------------------------------------------------
+# CPU functions (backward-compatible, used by ablation & tests)
+# ---------------------------------------------------------------------------
+
+def compute_transport_operator(
+    attention: np.ndarray,
+    value_matrices: np.ndarray,
+    gamma: np.ndarray,
+    event_from: int,
+    event_to: int,
+    layer: int,
+) -> np.ndarray:
+    """Compute the transport operator U_{ij}^{(l)} for a single model layer (CPU).
+
+    Used by ablation study and unit tests. For the main pipeline, the GPU-
+    accelerated ``_batched_transport`` is used instead.
+    """
+    n_heads = attention.shape[1]
+    d_model = value_matrices.shape[2]
+    n_standpoint = len(LAYER_NAMES)
+
+    U = np.zeros((d_model, d_model), dtype=np.float32)
+    I_d = np.eye(d_model, dtype=np.float32)
+
+    for k in range(n_standpoint):
+        head_mask = np.where(gamma == k)[0]
+        if len(head_mask) == 0:
+            continue
+        alpha_k = attention[layer, head_mask, event_to, event_from].mean()
+        V_heads = value_matrices[layer, head_mask]
+        projections = np.einsum("hij,hkj->hik", V_heads, V_heads)
+        P_k = projections.mean(axis=0)
+        P_k += EPSILON_PROJ * I_d
+        U += alpha_k * P_k
+
+    return U
+
+
 def compute_curvature(
     U_12: np.ndarray,
     U_23: np.ndarray,
     U_exp: np.ndarray,
     projection_bases: List[np.ndarray] | None = None,
 ) -> Tuple[np.ndarray, Dict[str, float]]:
-    """Compute the curvature tensor F and its block-specific norms.
+    """Compute the curvature tensor F and its block-specific norms (CPU).
 
-    The curvature is defined as:
-
-        F_{ijk} = U_{12} . U_{23} . (U_{13}^exp)^{-1}
-
-    When ``projection_bases`` is provided, the block-specific norm for layer k
-    is computed by projecting ``(F - I)`` onto the gamma-aligned subspace Q_k::
-
-        ||F||_k = ||Q_k^T (F - I) Q_k||_F
-
-    Otherwise, falls back to equal-width diagonal blocks (legacy behavior).
-
-    Parameters
-    ----------
-    U_12 : np.ndarray
-        Shape ``(d_model, d_model)`` — transport operator from event 1 to 2.
-    U_23 : np.ndarray
-        Shape ``(d_model, d_model)`` — transport operator from event 2 to 3.
-    U_exp : np.ndarray
-        Shape ``(d_model, d_model)`` — expected (direct) transport operator
-        from event 1 to 3.
-    projection_bases : list[np.ndarray] or None
-        Gamma-aligned orthonormal bases per standpoint layer.  If None,
-        uses legacy equal-width block partition.
-
-    Returns
-    -------
-    F : np.ndarray
-        Shape ``(d_model, d_model)`` — the curvature tensor.
-    block_norms : dict
-        ``{layer_name: float}`` — Frobenius norm of each block minus identity.
+    Used by ablation study and unit tests. For the main pipeline, the GPU-
+    accelerated ``_batched_curvature`` is used instead.
     """
     d_model = U_12.shape[0]
     n_standpoint = len(LAYER_NAMES)
 
-    # Level 2 regularization: Tikhonov damping before inversion
     U_exp_reg = U_exp + EPSILON_INV * np.eye(d_model, dtype=np.float32)
 
     try:
@@ -209,20 +259,17 @@ def compute_curvature(
     except np.linalg.LinAlgError:
         U_exp_inv = np.linalg.pinv(U_exp_reg)
 
-    # Curvature tensor
     F = U_12 @ U_23 @ U_exp_inv
 
-    # Block-specific norms
     block_norms: Dict[str, float] = {}
     deviation = F - np.eye(d_model, dtype=np.float32)
 
     for idx, name in enumerate(LAYER_NAMES):
         if projection_bases is not None:
-            Q_k = projection_bases[idx]  # (d_model, rank_k)
-            F_projected = Q_k.T @ deviation @ Q_k  # (rank_k, rank_k)
+            Q_k = projection_bases[idx]
+            F_projected = Q_k.T @ deviation @ Q_k
             norm = float(np.linalg.norm(F_projected, "fro"))
         else:
-            # Fallback: equal-width blocks (legacy behavior)
             block_size = d_model // n_standpoint
             start = idx * block_size
             end = d_model if idx == n_standpoint - 1 else (idx + 1) * block_size
@@ -243,41 +290,20 @@ def compute_baseline_transport(
     gamma: np.ndarray,
     value_matrices: np.ndarray,
 ) -> np.ndarray:
-    """Compute the mean transport product U_12 @ U_23 for T1 test conversations.
+    """Compute the mean transport product U_12 @ U_23 for T1 test conversations (CPU).
 
-    This serves as the expected transport U_{13}^exp under the null (baseline)
-    condition where no standpoint-specific failure is induced.
-
-    Parameters
-    ----------
-    test_activations : dict
-        ``{conv_id: {"attention": ..., ...}}`` —
-        reorganised activations for the test split.  Only T1 entries are used.
-    scenario : str
-        The scenario identifier (used for logging; the function always filters
-        for T1 conversations).
-    layer : int
-        Model layer index at which to evaluate transport operators.
-    value_matrices : np.ndarray
-        Shared value projection weights ``(n_layers, n_heads, d_model, d_head)``.
-
-    Returns
-    -------
-    np.ndarray
-        Shape ``(d_model, d_model)`` — mean product U_12 @ U_23 over all T1
-        test conversations.
+    Used by ablation study. For the main pipeline, the GPU-accelerated path
+    in ``run_curvature_computation`` is used instead.
     """
     products = []
 
     for conv_id, fields in test_activations.items():
-        # Only use T1 (baseline) conversations
         if not conv_id.startswith("T1/"):
             continue
 
         attn = fields["attention"]
         V = value_matrices
 
-        # Events 1->2 (indices 0->1) and 2->3 (indices 1->2) in a 5-event conv
         U_12 = compute_transport_operator(attn, V, gamma, 0, 1, layer)
         U_23 = compute_transport_operator(attn, V, gamma, 1, 2, layer)
         products.append(U_12 @ U_23)
@@ -292,7 +318,7 @@ def compute_baseline_transport(
 
 
 # ---------------------------------------------------------------------------
-# Full pipeline
+# Full pipeline (GPU-accelerated)
 # ---------------------------------------------------------------------------
 
 def run_curvature_computation(
@@ -300,6 +326,7 @@ def run_curvature_computation(
     activations_path: Path,
     gamma_path: Path,
     output_dir: Path = RESULTS_DIR,
+    batch_size: int = 16,
 ) -> Path:
     """Run the full curvature computation pipeline for a single model.
 
@@ -321,6 +348,8 @@ def run_curvature_computation(
         Path to the ``{model_name}_grouping.npz`` produced by head grouping.
     output_dir : Path, optional
         Directory for the output CSV (default ``RESULTS_DIR``).
+    batch_size : int
+        Number of conversations to process simultaneously on GPU.
 
     Returns
     -------
@@ -333,6 +362,9 @@ def run_curvature_computation(
         )
     model_config = MODELS[model_name]
     n_layers = model_config.n_layers
+
+    device = _pick_device()
+    print(f"Using device: {device}")
 
     # ------------------------------------------------------------------
     # 1. Load data
@@ -391,45 +423,92 @@ def run_curvature_computation(
     print(f"Computing curvature for {len(all_conv_ids)} test conversations "
           f"across {n_layers} layers (including T1 baseline) ...")
 
+    # GPU tensors shared across layers
+    gamma_t = torch.as_tensor(gamma, device=device, dtype=torch.long)
+    value_matrices_t = torch.as_tensor(
+        sample_V.astype(np.float32), device=device, dtype=torch.float32
+    )
+
     rows = []
     total = n_layers * len(all_conv_ids)
     done = 0
-    warn_count = 0
 
     for layer in range(n_layers):
-        # Compute baseline transport from T1 test conversations at this layer
-        U_exp = compute_baseline_transport(test_activations, "T1", layer, gamma, sample_V.astype(np.float32))
+        # Pre-compute P_k stack for this layer (shared across all conversations)
+        P_stack_t = _build_P_stack(value_matrices_t, gamma_t, layer, device)
 
-        # Compute gamma-aligned projection bases for this layer
-        proj_bases = compute_projection_bases(sample_V.astype(np.float32), gamma, layer)
+        # Gamma-aligned projection bases for block norms
+        proj_bases = compute_projection_bases(
+            sample_V.astype(np.float32), gamma, layer
+        )
 
-        for conv_id in all_conv_ids:
-            fields = test_activations[conv_id]
-            attn = fields["attention"].astype(np.float32)
-            V = sample_V.astype(np.float32)  # value_matrices are model weights, same for all convs
+        # --- Compute U_exp from T1 baseline conversations ---
+        t1_ids = [c for c in all_conv_ids if c.startswith("T1/")]
+        if not t1_ids:
+            raise ValueError("No T1 test conversations found for baseline computation.")
 
-            # Transport operators for events 1->2 and 2->3
-            U_12 = compute_transport_operator(attn, V, gamma, 0, 1, layer)
-            U_23 = compute_transport_operator(attn, V, gamma, 1, 2, layer)
+        t1_products = []
+        for conv_id in t1_ids:
+            attn = torch.as_tensor(
+                test_activations[conv_id]["attention"].astype(np.float32),
+                device=device, dtype=torch.float32,
+            )
+            u12 = _batched_transport(
+                attn.unsqueeze(0), P_stack_t, gamma_t, 0, 1, layer
+            )
+            u23 = _batched_transport(
+                attn.unsqueeze(0), P_stack_t, gamma_t, 1, 2, layer
+            )
+            t1_products.append(torch.bmm(u12, u23).squeeze(0))
 
-            # Curvature tensor and block norms
-            F, block_norms = compute_curvature(U_12, U_23, U_exp, proj_bases)
+        U_exp = torch.stack(t1_products, dim=0).mean(dim=0)  # (d_model, d_model)
+        U_exp_reg = U_exp + EPSILON_INV * torch.eye(
+            U_exp.shape[0], device=device, dtype=torch.float32
+        )
+        U_exp_inv = torch.linalg.inv(U_exp_reg)  # (d_model, d_model)
 
-            # Extract scenario from conv_id
-            scenario = conv_id.split("/")[0]
+        # --- Batch curvature computation for ALL conversations ---
+        for batch_start in range(0, len(all_conv_ids), batch_size):
+            batch_ids = all_conv_ids[batch_start : batch_start + batch_size]
+            B = len(batch_ids)
 
-            # Total curvature (L2 norm of block norms)
-            curvature_total = float(np.sqrt(sum(v ** 2 for v in block_norms.values())))
+            # Stack attention tensors: (B, n_heads, n_events, n_events)
+            attn_list = []
+            for conv_id in batch_ids:
+                attn_np = test_activations[conv_id]["attention"].astype(np.float32)
+                attn_list.append(torch.as_tensor(attn_np, device=device, dtype=torch.float32))
+            attn_batch = torch.stack(attn_list, dim=0)
 
-            row = {"conversation_id": conv_id, "scenario": scenario, "layer": layer}
-            for name in LAYER_NAMES:
-                row[f"curvature_{name}"] = block_norms[name]
-            row["curvature_total"] = curvature_total
-            rows.append(row)
+            # Batched transport operators
+            U_12 = _batched_transport(attn_batch, P_stack_t, gamma_t, 0, 1, layer)
+            U_23 = _batched_transport(attn_batch, P_stack_t, gamma_t, 1, 2, layer)
 
-            done += 1
-            if done % 50 == 0:
-                print(f"  ... processed {done}/{total} combinations")
+            # Expand U_exp_inv for batched matmul
+            U_exp_inv_batch = U_exp_inv.unsqueeze(0).expand(B, -1, -1)
+
+            # Curvature and block norms
+            F, block_norms_list = _batched_curvature(
+                U_12, U_23, U_exp_inv_batch, proj_bases, device
+            )
+
+            # Extract results
+            for i, conv_id in enumerate(batch_ids):
+                scenario = conv_id.split("/")[0]
+                curvatures = {}
+                for idx, name in enumerate(LAYER_NAMES):
+                    curvatures[name] = float(block_norms_list[idx][i])
+                curvature_total = float(
+                    np.sqrt(sum(v ** 2 for v in curvatures.values()))
+                )
+
+                row = {"conversation_id": conv_id, "scenario": scenario, "layer": layer}
+                for name in LAYER_NAMES:
+                    row[f"curvature_{name}"] = curvatures[name]
+                row["curvature_total"] = curvature_total
+                rows.append(row)
+
+            done += B
+            print(f"  ... processed {done}/{total} combinations", flush=True)
 
     # ------------------------------------------------------------------
     # 5. Save results to CSV
