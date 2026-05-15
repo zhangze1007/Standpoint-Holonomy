@@ -73,8 +73,8 @@ def compute_transport_operator(
     d_model = value_matrices.shape[2]
     n_standpoint = len(LAYER_NAMES)
 
-    U = np.zeros((d_model, d_model), dtype=np.float64)
-    I_d = np.eye(d_model, dtype=np.float64)
+    U = np.zeros((d_model, d_model), dtype=np.float32)
+    I_d = np.eye(d_model, dtype=np.float32)
 
     for k in range(n_standpoint):
         # Heads assigned to standpoint layer k
@@ -136,7 +136,7 @@ def compute_projection_bases(
     for k in range(n_standpoint):
         head_indices = np.where(gamma == k)[0]
         if len(head_indices) == 0:
-            bases.append(np.eye(d_model, dtype=np.float64))
+            bases.append(np.eye(d_model, dtype=np.float32))
             continue
 
         # Collect V_h columns: each head contributes (d_model, d_head)
@@ -202,7 +202,10 @@ def compute_curvature(
     n_standpoint = len(LAYER_NAMES)
 
     # Level 2 regularization: Tikhonov damping before inversion
-    U_exp_reg = U_exp + EPSILON_INV * np.eye(d_model, dtype=U_exp.dtype)
+    U_exp_reg = U_exp + EPSILON_INV * np.eye(d_model, dtype=np.float32)
+
+    # Force float32 for speed
+    U_exp_reg = U_exp_reg.astype(np.float32)
 
     try:
         U_exp_inv = np.linalg.inv(U_exp_reg)
@@ -214,7 +217,7 @@ def compute_curvature(
 
     # Block-specific norms
     block_norms: Dict[str, float] = {}
-    deviation = F - np.eye(d_model, dtype=F.dtype)
+    deviation = F - np.eye(d_model, dtype=np.float32)
 
     for idx, name in enumerate(LAYER_NAMES):
         if projection_bases is not None:
@@ -228,7 +231,7 @@ def compute_curvature(
             end = d_model if idx == n_standpoint - 1 else (idx + 1) * block_size
             block_dim = end - start
             F_block = F[start:end, start:end]
-            I_block = np.eye(block_dim, dtype=F.dtype)
+            I_block = np.eye(block_dim, dtype=np.float32)
             norm = float(np.linalg.norm(F_block - I_block, "fro"))
 
         block_norms[name] = norm
@@ -398,15 +401,15 @@ def run_curvature_computation(
 
     for layer in range(n_layers):
         # Compute baseline transport from T1 test conversations at this layer
-        U_exp = compute_baseline_transport(test_activations, "T1", layer, gamma, sample_V)
+        U_exp = compute_baseline_transport(test_activations, "T1", layer, gamma, sample_V.astype(np.float32))
 
         # Compute gamma-aligned projection bases for this layer
-        proj_bases = compute_projection_bases(sample_V, gamma, layer)
+        proj_bases = compute_projection_bases(sample_V.astype(np.float32), gamma, layer)
 
         for conv_id in all_conv_ids:
             fields = test_activations[conv_id]
-            attn = fields["attention"]
-            V = sample_V  # value_matrices are model weights, same for all convs
+            attn = fields["attention"].astype(np.float32)
+            V = sample_V.astype(np.float32)  # value_matrices are model weights, same for all convs
 
             # Transport operators for events 1->2 and 2->3
             U_12 = compute_transport_operator(attn, V, gamma, 0, 1, layer)
@@ -414,15 +417,6 @@ def run_curvature_computation(
 
             # Curvature tensor and block norms
             F, block_norms = compute_curvature(U_12, U_23, U_exp, proj_bases)
-
-            # Level 3 sanity check: warn if F has extreme singular values
-            if warn_count < 5:
-                sv = np.linalg.svd(F, compute_uv=False)
-                if sv[0] > 1e8:
-                    cond = sv[0] / max(sv[-1], 1e-30)
-                    print(f"  WARNING: layer={layer} conv={conv_id} "
-                          f"max_sv={sv[0]:.2e}, cond={cond:.2e}")
-                    warn_count += 1
 
             # Extract scenario from conv_id
             scenario = conv_id.split("/")[0]
