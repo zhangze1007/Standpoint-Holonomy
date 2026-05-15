@@ -1,10 +1,10 @@
 # LCESA: Low-Curvature Endogenous Standpoint Attractor
 
-![Python](https://img.shields.io/badge/Python-3.12-blue?logo=python&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-ee4c2c?logo=pytorch&logoColor=white)
-![Transformers](https://img.shields.io/badge/Transformers-4.30+-ffcc00?logo=huggingface&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green)
-![Status](https://img.shields.io/badge/Status-Research%20in%20Progress-orange)
+![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
+![Transformers](https://img.shields.io/badge/Transformers-4.30+-FFCC00?style=flat-square&logo=huggingface&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-4CAF50?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Research_in_Progress-FF9800?style=flat-square)
 
 **A geometric framework for detecting and characterizing failure modes in Large Language Models through curvature analysis of internal representations.**
 
