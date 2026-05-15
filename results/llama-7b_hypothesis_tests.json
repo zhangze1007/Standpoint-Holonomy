@@ -1,0 +1,699 @@
+{
+  "H1": {
+    "T2": {
+      "target_layer": "nar",
+      "n_conversations": 960,
+      "mean_target_ratio": 0.1162936136178641,
+      "median_target_ratio": 0.11851670438010602,
+      "n_heads_assigned": 3,
+      "head_assigned": true
+    },
+    "T3": {
+      "target_layer": "mor",
+      "n_conversations": 960,
+      "mean_target_ratio": 0.23578177113434692,
+      "median_target_ratio": 0.23499167113997577,
+      "n_heads_assigned": 8,
+      "head_assigned": true
+    },
+    "T4": {
+      "target_layer": "soc",
+      "n_conversations": 960,
+      "mean_target_ratio": 0.21647749911077463,
+      "median_target_ratio": 0.21550558690599184,
+      "n_heads_assigned": 7,
+      "head_assigned": true
+    },
+    "T5": {
+      "target_layer": "pos",
+      "n_conversations": 960,
+      "mean_target_ratio": 0.21596946235659936,
+      "median_target_ratio": 0.21520835888360973,
+      "n_heads_assigned": 7,
+      "head_assigned": true
+    },
+    "aggregate": {
+      "n_total": 3840,
+      "mean_ratio": 0.19613058655489624,
+      "chance_level": 0.2,
+      "t_statistic": -5.053936276903195,
+      "p_value": 0.9999997735138682,
+      "passed": false
+    },
+    "head_assigned_layers": {
+      "n": 3840,
+      "mean_ratio": 0.19613058655489624,
+      "median_ratio": 0.21540133302676523,
+      "scenarios": [
+        "T2",
+        "T3",
+        "T4",
+        "T5"
+      ]
+    }
+  },
+  "H2": {
+    "t1_mean": 43.74481730927466,
+    "t1_std": 6.699061158604939,
+    "failure_mean": 42.060368915286,
+    "failure_std": 4.46935823098274,
+    "mean_difference": -1.68444839398866,
+    "cohens_d": -0.29580742268885374,
+    "mean_diff_ci_95": [
+      -0.29179616587332863,
+      0.29750505692762724
+    ],
+    "mann_whitney_statistic": 4772914.0,
+    "p_value": 1.0,
+    "passed": "False"
+  },
+  "H3": {
+    "per_layer": {
+      "min": {
+        "statistic": 75.182050801818,
+        "epsilon_squared": 0.4200114569933966,
+        "p_value": 8.523673662557404e-15,
+        "corrected_alpha": 0.01,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "nar": {
+        "statistic": 75.58285783872324,
+        "epsilon_squared": 0.42225060245096785,
+        "p_value": 7.0301687141772716e-15,
+        "corrected_alpha": 0.01,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "soc": {
+        "statistic": 75.57912448003118,
+        "epsilon_squared": 0.42222974569849825,
+        "p_value": 7.042795818332423e-15,
+        "corrected_alpha": 0.01,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "mor": {
+        "statistic": 75.18127713289972,
+        "epsilon_squared": 0.42000713482066887,
+        "p_value": 8.526843383015798e-15,
+        "corrected_alpha": 0.01,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "pos": {
+        "statistic": 75.58278005665521,
+        "epsilon_squared": 0.42225016791427494,
+        "p_value": 7.0304315607551614e-15,
+        "corrected_alpha": 0.01,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      }
+    },
+    "n_layers": 5,
+    "corrected_alpha": 0.01,
+    "all_layers_passed": true,
+    "passed": true
+  },
+  "H4": {
+    "per_layer": {
+      "0": {
+        "statistic": 50.9278552243479,
+        "epsilon_squared": 0.28451315767792124,
+        "p_value": 8.948118508330456e-10,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "1": {
+        "statistic": 45.95174941365802,
+        "epsilon_squared": 0.25671368387518445,
+        "p_value": 9.289865484168879e-09,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "2": {
+        "statistic": 56.486966318980976,
+        "epsilon_squared": 0.3155696442401172,
+        "p_value": 6.450700936895126e-11,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "3": {
+        "statistic": 59.96653868758277,
+        "epsilon_squared": 0.3350085960200155,
+        "p_value": 1.2349635114421247e-11,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "4": {
+        "statistic": 75.92012347509905,
+        "epsilon_squared": 0.4241347680173131,
+        "p_value": 5.977977969483347e-15,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "5": {
+        "statistic": 99.70457113275225,
+        "epsilon_squared": 0.5570087772779455,
+        "p_value": 6.099855664904647e-20,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "6": {
+        "statistic": 102.83634111643896,
+        "epsilon_squared": 0.5745046989745193,
+        "p_value": 1.3335759344677906e-20,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "7": {
+        "statistic": 109.91865459928258,
+        "epsilon_squared": 0.6140706960853776,
+        "p_value": 4.262767605039221e-22,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "8": {
+        "statistic": 111.95911164389949,
+        "epsilon_squared": 0.6254698974519525,
+        "p_value": 1.5789925133655624e-22,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "9": {
+        "statistic": 100.29293478559384,
+        "epsilon_squared": 0.5602957250591835,
+        "p_value": 4.58474355072743e-20,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "10": {
+        "statistic": 91.01273144715229,
+        "epsilon_squared": 0.5084510136712419,
+        "p_value": 4.116647213488969e-18,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "11": {
+        "statistic": 95.5227083230346,
+        "epsilon_squared": 0.5336464152124838,
+        "p_value": 4.635033894808441e-19,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "12": {
+        "statistic": 98.81596676388682,
+        "epsilon_squared": 0.5520445070608202,
+        "p_value": 9.387758733278859e-20,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "13": {
+        "statistic": 107.08963245835189,
+        "epsilon_squared": 0.5982661031192843,
+        "p_value": 1.687835877309913e-21,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "14": {
+        "statistic": 89.97640323847507,
+        "epsilon_squared": 0.502661470606006,
+        "p_value": 6.796450944488953e-18,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "15": {
+        "statistic": 90.37501180922868,
+        "epsilon_squared": 0.5048883341297692,
+        "p_value": 5.604564942652781e-18,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "16": {
+        "statistic": 96.94741995814589,
+        "epsilon_squared": 0.5416056980902004,
+        "p_value": 2.323415359403133e-19,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "17": {
+        "statistic": 100.42446062034153,
+        "epsilon_squared": 0.5610305062588913,
+        "p_value": 4.301218332731727e-20,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "18": {
+        "statistic": 104.10074411872942,
+        "epsilon_squared": 0.5815684028979298,
+        "p_value": 7.215469523972931e-21,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "19": {
+        "statistic": 97.77263334816352,
+        "epsilon_squared": 0.5462158287606901,
+        "p_value": 1.5571964336418714e-19,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "20": {
+        "statistic": 90.76600068109038,
+        "epsilon_squared": 0.5070726295032982,
+        "p_value": 4.63863932946413e-18,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "21": {
+        "statistic": 92.37764073579729,
+        "epsilon_squared": 0.5160762052279178,
+        "p_value": 2.1264016577333895e-18,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "22": {
+        "statistic": 84.2255952675202,
+        "epsilon_squared": 0.4705340517738559,
+        "p_value": 1.0939675446752101e-16,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "23": {
+        "statistic": 87.45538899050318,
+        "epsilon_squared": 0.4885775921257161,
+        "p_value": 2.299391696023501e-17,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "24": {
+        "statistic": 86.7091746722252,
+        "epsilon_squared": 0.48440879705153744,
+        "p_value": 3.2975830688591465e-17,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "25": {
+        "statistic": 97.79709012363976,
+        "epsilon_squared": 0.5463524587912836,
+        "p_value": 1.5388359103592333e-19,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "26": {
+        "statistic": 104.52012251388273,
+        "epsilon_squared": 0.5839112989602387,
+        "p_value": 5.885279947600307e-21,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "27": {
+        "statistic": 101.53226652056168,
+        "epsilon_squared": 0.5672193660366575,
+        "p_value": 2.5121249581227128e-20,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "28": {
+        "statistic": 92.81083290765183,
+        "epsilon_squared": 0.5184962732271052,
+        "p_value": 1.7240959241898233e-18,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "29": {
+        "statistic": 83.33354974431647,
+        "epsilon_squared": 0.4655505572308183,
+        "p_value": 1.6824295928562752e-16,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "30": {
+        "statistic": 73.44118962875076,
+        "epsilon_squared": 0.4102859755796132,
+        "p_value": 1.9669502543200372e-14,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      },
+      "31": {
+        "statistic": 30.131042342950998,
+        "epsilon_squared": 0.16832984549134636,
+        "p_value": 1.3897989549558391e-05,
+        "corrected_alpha": 0.0015625,
+        "n_groups": 6,
+        "scenario_labels": [
+          "T0",
+          "T1",
+          "T2",
+          "T3",
+          "T4",
+          "T5"
+        ],
+        "passed": "True"
+      }
+    },
+    "n_layers": 32,
+    "corrected_alpha": 0.0015625,
+    "all_layers_passed": true,
+    "passed": true
+  },
+  "H5": {
+    "skipped": true,
+    "reason": "no ablation data"
+  },
+  "H6": {
+    "curvature_t1_mean": 43.74481730927466,
+    "curvature_failure_mean": 42.060368915286,
+    "curvature_separation": -1.68444839398866,
+    "curvature_cohens_d": -0.29580742268885374,
+    "probing_f1_mean": 1.0,
+    "probing_f1_std": 0.0,
+    "passed": "False"
+  },
+  "summary": {
+    "H1": false,
+    "H2": "False",
+    "H3": true,
+    "H4": true,
+    "H5": true,
+    "H6": "False"
+  }
+}
