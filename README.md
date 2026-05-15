@@ -210,7 +210,7 @@ Low-Curvature-Endogenous-Standpoint-Attractor/
 | Model | Min VRAM | Recommended | Time (est.) |
 |-------|----------|-------------|-------------|
 | GPT-2 | 4 GB | Any GPU | ~1 hour |
-| Llama-2-7b | 16 GB | RTX 4090 24GB | ~2-3 hours |
+| Llama-2-7b | 16 GB | RTX 4090 48GB | ~2-3 hours |
 | Llama-2-13b | 28 GB | A100 40GB | ~4-5 hours |
 
 ### vast.ai Setup
