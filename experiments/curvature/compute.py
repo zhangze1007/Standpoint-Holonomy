@@ -151,8 +151,18 @@ def _batched_transport(
     -------
     (B, d_model, d_model) on GPU
     """
-    # alpha: (B, n_standpoint)
-    raw = attention_batch_t[:, :, event_to, event_from]  # (B, n_heads)
+    # Select the layer: attention may be (B, n_layers, n_heads, n_events, n_events)
+    # or already (B, n_heads, n_events, n_events)
+    if attention_batch_t.dim() == 5:
+        attn_layer = attention_batch_t[:, layer]          # (B, n_heads, n_events, n_events)
+    else:
+        attn_layer = attention_batch_t                     # (B, n_heads, n_events, n_events)
+
+    # alpha: (B, n_heads) — extract attention weight at (event_to, event_from)
+    n_events = attn_layer.shape[2]
+    flat_idx = event_to * n_events + event_from
+    raw = attn_layer.reshape(attn_layer.shape[0], attn_layer.shape[1], -1)[:, :, flat_idx]  # (B, n_heads)
+
     n_standpoint = P_stack_t.shape[0]
     alpha = torch.stack(
         [raw[:, gamma_t == k].mean(dim=1) for k in range(n_standpoint)],
