@@ -202,16 +202,15 @@ def compute_curvature(
     n_standpoint = len(LAYER_NAMES)
 
     # Level 2 regularization: Tikhonov damping before inversion
-    # Promote to float64 for inversion (numerically sensitive)
-    U_exp_reg = (U_exp + EPSILON_INV * np.eye(d_model, dtype=np.float32)).astype(np.float64)
+    U_exp_reg = U_exp + EPSILON_INV * np.eye(d_model, dtype=np.float32)
 
     try:
         U_exp_inv = np.linalg.inv(U_exp_reg)
     except np.linalg.LinAlgError:
         U_exp_inv = np.linalg.pinv(U_exp_reg)
 
-    # Curvature tensor (promote to float64 for precision)
-    F = (U_12.astype(np.float64) @ U_23.astype(np.float64)) @ U_exp_inv
+    # Curvature tensor
+    F = U_12 @ U_23 @ U_exp_inv
 
     # Block-specific norms
     block_norms: Dict[str, float] = {}
