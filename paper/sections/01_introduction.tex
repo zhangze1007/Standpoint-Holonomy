@@ -1,12 +1,43 @@
 % ==============================================================================
 % Section 1: Introduction
-% "Endogenous Standpoint as a Low-Curvature Attractor"
+"Holonomy Geometry of Cognitive States in Transformer Internal Representations"
 % ==============================================================================
 
 \begin{abstract}
-We propose a geometric framework for measuring cognitive states in transformer internal representations via discrete holonomy deviation analysis of attention-derived transport operators. Given a multi-turn conversation, we define transport operators from attention weights and value matrices, compute holonomy deviation vectors measuring the failure of path-independent transport, and project onto standpoint-specific subspace blocks. We validate the framework on two architecturally distinct models (GPT-2, 768-dim / 12 layers; Llama-2-7b-Chat, 4096-dim / 32 layers) using 270 conversations across six scenario types: unrestricted factual retrieval (T0, functioning as a retrieval-complexity condition), acknowledged revision baseline (T1), and four failure modes targeting narrative (T2), moral (T3), social (T4), and positional (T5) dimensions.
+We propose a geometric framework for analyzing transformer internal representations via
+discrete holonomy deviation of attention-derived transport operators over a multi-turn
+event-sequence space. We validate the framework on two architecturally distinct
+models (GPT-2, 768-dim / 12 layers; Llama-2-7b-Chat, 4096-dim / 32 layers) using 270
+conversations across six scenario types, including unrestricted factual retrieval (T0,
+functioning as a retrieval-complexity condition) and an acknowledged-revision baseline
+(T1).
 
-Seven hypothesis tests yield three robust findings. First, holonomy deviation vectors significantly discriminate between scenario types (Kruskal--Wallis $\varepsilon^2 = 0.42$--$0.68$, $p < 10^{-14}$), confirmed at every layer in both models (H3/H4). Second, failure scenarios produce higher global holonomy deviation than the acknowledged-revision baseline (30/32 layers in Llama-7b, 12/12 in GPT-2). Third, and counter-intuitively, unrestricted factual retrieval produces the highest holonomy deviation of all conditions ($d = 1.74$, $p < 10^{-6}$), exceeding adversarial failure scenarios at every layer and every standpoint block. This T0 anomaly suggests that the most geometrically complex internal states arise not from external pressure but from unconstrained knowledge retrieval. Block-specific holonomy concentration (H1) is not confirmed: the five standpoint blocks are highly correlated ($r > 0.97$), indicating a dominant global coherence signal rather than five independent dimensions. The five-layer decomposition is accordingly interpreted as an interpretable diagnostic projection coordinate system, not as a decomposition into causally independent cognitive processes. The results establish holonomy geometry as a viable tool for probing cognitive states in language models, while revealing that the relationship between internal complexity and external pressure is more nuanced than previously assumed.
+Three central findings emerge. First, the six scenario types produce geometrically
+distinguishable internal states: holonomy deviation vectors significantly discriminate
+between scenario types (Kruskal--Wallis $\varepsilon^2 = 0.42$--$0.68$, $p < 10^{-14}$;
+Table~\ref{tab:descriptive-stats} reports per-scenario descriptive statistics with
+confidence intervals), confirmed at every layer in both models (H3/H4). Second, T0
+(unrestricted factual retrieval) produces higher global holonomy deviation than T1
+(Mann--Whitney $d = 1.74$ [95\% CI: 1.13--2.35], $p < 10^{-6}$; H7) and ranks highest
+among all six scenario types in both models, though pairwise comparisons between T0 and
+individual failure scenarios (T2--T5) are not yet available. This T0 anomaly suggests
+that the most geometrically complex internal states arise from unconstrained knowledge
+retrieval rather than external pressure. Third, block-specific holonomy concentration
+(H1) is not confirmed: the five standpoint blocks are highly correlated ($r > 0.97$),
+and principal component analysis shows that the first component accounts for $>99.99\%$
+of variance with approximately uniform loadings, indicating a dominant global coherence
+signal rather than five independent dimensions. The five-layer decomposition is
+accordingly interpreted as an interpretable diagnostic projection coordinate system, not
+as a decomposition into causally independent cognitive processes.
+
+We identify three important limitations. The holonomy measure is reference-relative: it
+quantifies deviation from T1-like transport, and the T0 anomaly may partly reflect
+T1's low attentional variance rather than T0's standpoint complexity. The head grouping
+$\gamma$ is defined using T2/T3 attention differentials, creating a circularity with the
+block-specific measurements on those same scenarios. And within-scenario variance is
+substantial (scenario type explains 42--68\% of total variance), indicating that
+holonomy deviation is a population-level diagnostic with limited individual-classification
+power.
 \end{abstract}
 
 \section{Introduction}
@@ -57,4 +88,11 @@ This paper makes claims at three levels, with different degrees of empirical sup
 
 \textbf{Empirical claims (supported by the experiments in this paper):} Holonomy deviation vectors reliably discriminate between six conversation scenario types across two architecturally distinct models, at every layer (H3/H4, $\varepsilon^2 = 0.42$--$0.68$, $p < 10^{-14}$). Unrestricted factual retrieval (T0) produces higher global holonomy than adversarial failure scenarios in both models (H7, $d = 0.883$--$1.743$). Block-specific localization of holonomy is not confirmed; the dominant signal is global, consistent with distributed representation (H1: not confirmed).
 
-\textbf{Open claims (requiring future work):} Whether the five diagnostic projection axes carry independent information beyond the global mode (weak H1a, pending PCA analysis). Whether holonomy deviation has causal status as an internal state indicator, versus being a correlate of prompt-surface features (requires activation patching, Paper~V). The mechanism underlying the T0 anomaly (requires controlled factual retrieval experiments, Paper~V).
+\textbf{Open claims (requiring future work):} Whether the five diagnostic projection axes carry independent information beyond the global mode (PCA analysis confirms PC1 accounts for $>99.99\%$ of variance; weak H1a remains pending for residual components). Whether holonomy deviation has causal status as an internal state indicator, versus being a correlate of prompt-surface features (requires activation patching, Paper~V). The mechanism underlying the T0 anomaly (requires controlled factual retrieval experiments, Paper~V).
+
+\paragraph{Companion papers.}
+The companion papers~\cite{LCESA, self-jurisdiction} formalize the abstract geometric
+and logical foundations of the LCESA framework and are currently under preparation for
+concurrent submission. All definitions and propositions cited from these works are
+reproduced in full in the present paper for self-contained readability; no result in
+the present paper depends on the companion papers for its proof.

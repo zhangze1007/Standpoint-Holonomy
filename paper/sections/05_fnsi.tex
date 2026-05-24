@@ -1,14 +1,16 @@
 % ==============================================================================
 % Section 5: No Self-Inversion Functional
-% "Endogenous Standpoint as a Low-Curvature Attractor"
+"Holonomy Geometry of Cognitive States in Transformer Internal Representations"
 % ==============================================================================
 
 \section{No Self-Inversion Functional}
 \label{sec:fnsi}
 
 The discrete holonomy deviation $F_{ijk}$ and its block-specific norms $\|F_{ijk}\|_k$
-provide per-event, per-layer diagnostics. We now aggregate these into a single scalar
-functional that quantifies the overall standpoint coherence of a conversation.
+provide per-event diagnostics, with the block-specific norms serving as interpretable
+projections of the global holonomy signal onto psychologically motivated axes
+(Section~\ref{sec:five-layer}). We now aggregate these into a single scalar functional
+that quantifies the overall standpoint coherence of a conversation.
 
 % ------------------------------------------------------------------------------
 \subsection{Definition}
@@ -89,7 +91,7 @@ estimated from human-approved conversations, $F_{\mathrm{NSI}}$ measures the sys
 deviation from human-expected consistency. Without such a baseline, $F_{\mathrm{NSI}}$
 measures only internal coherence.
 
-Curvature minimization is an \emph{internal} objective (the system maintains its own
+Holonomy minimization is an \emph{internal} objective (the system maintains its own
 commitments); RLHF is an \emph{external} objective (human feedback shapes behavior).
 The two are complementary: $L_{\mathrm{total}} = L_{\mathrm{RLHF}} + \lambda \cdot
 F_{\mathrm{NSI}}$ would combine external alignment with internal coherence.

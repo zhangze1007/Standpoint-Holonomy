@@ -1,6 +1,6 @@
 % ==============================================================================
 % Section 3: Geometric Framework
-% "Endogenous Standpoint as a Low-Curvature Attractor"
+"Holonomy Geometry of Cognitive States in Transformer Internal Representations"
 % ==============================================================================
 
 \section{Geometric Framework}
@@ -92,6 +92,15 @@ acts on $E_x$ by
 This action preserves the fiber decomposition: each $g \in G$ maps $W_k$ to itself (i.e.,
 $g \cdot h \in W_k$ for $h \in W_k$). The fiber metric $g_F$ is $G$-invariant:
 $g_F(g \cdot h, g \cdot h') = g_F(h, h')$ for all $h, h' \in E_x$ and $g \in G$.
+The structure group $G$ defines the gauge freedom: two connection representations
+related by $U_{ij} \mapsto g_j\, U_{ij}\, g_i^{-1}$ (with $g_i, g_j \in G$) are
+gauge-equivalent. This gauge symmetry is the basis for the gauge-invariant
+diagnostic framework developed in Section~\ref{sec:fnsi}. We note that the actual
+transport operators constructed from transformer attention
+(Section~\ref{sec:instantiation}) are scalar scalings on each block, lying in
+$\mathbb{R}_{>0} \subset GL(d_k, \mathbb{R})$ rather than $O(d_k)$; the framework
+is accordingly a vector bundle connection with $G$-gauge symmetry, as clarified in
+Remark~\ref{rem:vector-bundle}.
 \end{definition}
 
 % ------------------------------------------------------------------------------

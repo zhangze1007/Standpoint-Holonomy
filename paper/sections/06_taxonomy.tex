@@ -1,6 +1,6 @@
 % ==============================================================================
 % Section 6: Taxonomy of Standpoint Failure Modes
-% "Endogenous Standpoint as a Low-Curvature Attractor"
+"Holonomy Geometry of Cognitive States in Transformer Internal Representations"
 % ==============================================================================
 
 \section{Taxonomy of Standpoint Failure Modes}
@@ -11,6 +11,21 @@ by a distinct holonomy deviation signature across layers and scenario types. The
 is organized into four groups of three, corresponding to four dimensions of standpoint
 failure: commitment drift, boundary violation, coherence breakdown, and identity
 instability.
+
+\paragraph{Empirical caveat.}
+The block-specific signatures listed below are \emph{theoretical predictions} derived
+from the fiber bundle framework: they describe what holonomy pattern each failure mode
+\emph{would} produce if the five standpoint subspaces functioned as independent
+diagnostic channels. The experimental results (Section~\ref{sec:results}) show that H1b
+(block localization) is not confirmed: the five block-specific holonomy norms are
+highly correlated ($r > 0.97$), and the dominant signal is a global coherence mode
+(Section~\ref{sec:reframing}). Consequently, the twelve failure modes may not be
+distinguishable in practice by block-specific holonomy patterns alone; the primary
+empirical signal is the \emph{magnitude} of global holonomy deviation rather than its
+\emph{distribution} across blocks. The taxonomy remains valuable as a theoretical
+vocabulary for describing standpoint failure and as a set of interpretable projection
+axes, but its diagnostic power at the block-specific level is an open question pending
+further investigation (see Section~\ref{sec:discussion}).
 
 \begin{table}[t]
 \centering
@@ -223,10 +238,13 @@ a coherent self.
 % ------------------------------------------------------------------------------
 \subsection{Diagnostic Summary}
 
-The taxonomy provides a diagnostic ``map'' for standpoint failures: given a conversation
-with measured block-specific holonomy deviations $\{\|F_{ijk}\|_k\}$, the failure mode is
-identified by which layers show elevated holonomy deviation and in which temporal pattern. The
-diagnostic procedure is:
+The taxonomy provides a diagnostic ``map'' for standpoint failures. In the idealized
+case where block-specific localization holds (H1b), the failure mode is identified by
+which layers show elevated holonomy deviation and in which temporal pattern. Under the
+empirically observed global-mode regime (Section~\ref{sec:reframing}), the primary
+diagnostic signal is the \emph{magnitude} of global holonomy deviation $\|F_{ijk}\|$
+rather than its block-specific distribution; the block-specific decomposition provides
+interpretable secondary vocabulary. The diagnostic procedure is:
 
 \begin{enumerate}
     \item Compute $\|F_{ijk}\|_k$ for all triangles and layers

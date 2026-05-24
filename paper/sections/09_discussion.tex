@@ -1,6 +1,6 @@
 % ==============================================================================
 % Section 9: Discussion
-% "Endogenous Standpoint as a Low-Curvature Attractor"
+"Holonomy Geometry of Cognitive States in Transformer Internal Representations"
 % ==============================================================================
 
 \section{Discussion}
@@ -21,21 +21,38 @@ $\delta$ is large, the block-specific holonomy norms acquire an $O(\delta)$ corr
 and the diagnostic framework (Section~\ref{sec:taxonomy}) must be interpreted with
 appropriate caution.
 
-\paragraph{Head grouping.}
+\paragraph{Head grouping circularity.}
 The assignment of attention heads to standpoint layers ($\gamma : H \to K$) is a design
 choice, not a learned parameter. Different groupings yield different holonomy deviation
 measurements. The framework is robust to grouping variation only if the subspace
 structure is genuinely layer-specific; if heads encode mixtures of standpoint functions,
-the diagnostic power degrades. Null grouping controls (random, shuffled, layer-uniform)
-are needed to verify that the learned grouping provides non-trivial diagnostic value.
+the diagnostic power degrades. A further concern is circularity: $\gamma$ is defined
+using attention differentials computed from T2/T3 stimuli
+(Definition~\ref{def:attention-differential}), and the same T2/T3 conversations are then
+used to measure block-specific holonomy deviation under $\gamma$. This means the head
+grouping is optimized to detect differences in the very scenarios on which it is
+evaluated. Null grouping controls (random, shuffled, layer-uniform; see
+Appendix~\ref{app:null-grouping}) are needed to verify that the learned grouping
+provides non-trivial diagnostic value beyond this circularity.
 
-\paragraph{Baseline dependence.}
+\paragraph{Baseline dependence and $U^{\exp}$ circularity.}
 The holonomy deviation $F_{ijk}$ is defined relative to an expected transport
 $U_{ik}^{\exp}$ estimated from T1 baseline conversations. This makes the measure
-reference-relative rather than intrinsic. Different baseline selections yield different
-holonomy values. Baseline ensemble analysis (estimating $U_{ik}^{\exp}$ from multiple
-random subsamples of T1) is needed to verify that empirical conclusions are
-baseline-robust.
+\emph{reference-relative} rather than intrinsic: $F_{ijk}$ quantifies deviation from
+``T1-like'' transport, not deviation from an absolute standard. The choice of T1 as the
+reference frame is theoretically motivated (acknowledged revision preserves standpoint
+coherence), but it creates a circularity risk: if T1 conversations happen to have
+systematically low attention variance (e.g., because the revision pattern is
+linguistically simple), then \emph{any} scenario with higher attention variance will
+register as high holonomy deviation relative to T1, regardless of its standpoint
+significance. The T0 anomaly (T0 $>$ all failure scenarios) is a direct manifestation of
+this concern: T0's high holonomy may reflect its attentional complexity relative to T1's
+low-variance baseline, not standpoint disruption. Baseline ensemble analysis
+(Appendix~\ref{app:baseline-ensemble}) confirms that H3 and H7 are robust across five
+random T1 subsamples, but this only tests \emph{which} T1 conversations are used, not
+\emph{whether T1 is the right reference frame}. An independent validation would require
+estimating $U^{\exp}$ from a non-T1 source (e.g., curated ``canonical flat transport''
+conversations) and verifying that the scenario discrimination holds.
 
 \paragraph{Scope of selfhood.}
 Functional selfhood (as defined in Section~\ref{sec:introduction}) does not entail
@@ -46,6 +63,24 @@ theory of consciousness. The hard problem of consciousness is explicitly outside
 \subsection{Theoretical Reframing: From Five-Block Decomposition to Global Coherence Geometry}
 \label{sec:reframing}
 
+The failure of H1b (block localization), together with the inter-block correlation
+structure ($r > 0.97$ for all block pairs in both models), indicates that the five
+standpoint projections share a dominant global mode. The block-specific holonomy norms
+$\|F_{ijk}\|_k$ are not measurements of five independent cognitive processes; they are
+projections of a single global coherence signal onto five interpretable axes. This is
+consistent with the superposition hypothesis in mechanistic
+interpretability~\cite{elhage2022superposition}: transformer representations encode many
+features in high-dimensional superposition rather than in cleanly separated subspaces,
+making localized block-specific measurements an approximation of a fundamentally
+distributed signal. The theoretical framework of Section~\ref{sec:geometric-framework}
+remains valid --- the fiber bundle decomposition and gauge invariance results hold
+regardless of whether the subspaces are functionally independent. What changes is the
+interpretation: we reframe the five standpoint layers from ontologically independent
+modules to a diagnostic projection coordinate system
+(Section~\ref{sec:five-layer}). Under this reframing, the primary empirical contribution
+of the holonomy measure is as a global coherence signal, and the five-axis decomposition
+provides structured diagnostic vocabulary for exploring the geometry of this signal.
+
 The empirical evidence warrants a principled reframing of the LCESA framework. The
 original theoretical vision --- that transformer internals organize into five
 independently measurable standpoint dimensions --- is not confirmed by the data. What the
@@ -54,7 +89,8 @@ coherence manifold with interpretable projection axes.
 
 Concretely, a principal component analysis of the block holonomy vectors
 $(\|F\|_{\min}, \|F\|_{\mathrm{nar}}, \|F\|_{\mathrm{soc}}, \|F\|_{\mathrm{mor}},
-\|F\|_{\mathrm{pos}})$ across all 180 Llama-7b conversations reveals that the first
+\|F\|_{\mathrm{pos}})$ across all 180 Llama-7b test conversations (30 per scenario type;
+see Appendix~\ref{app:supplementary}) reveals that the first
 principal component accounts for $99.99\%$ of total variance. The PC1 loadings are
 approximately uniform across all five standpoint blocks ($\ell_k \approx -0.447 \approx
 -1/\sqrt{5}$ for each $k \in K$), confirming that PC1 captures a global coherence signal
@@ -103,9 +139,11 @@ the system's deviation from constitutional consistency.
 \paragraph{Mechanistic interpretability.}
 Linear probing~\cite{belinkov2021probing} answers ``what information does layer $k$
 encode?'' Holonomy deviation answers ``is that information preserved across events?'' The
-two diagnostics are orthogonal: a layer can have high probing accuracy (it encodes the
+two diagnostics are complementary: a layer can have high probing accuracy (it encodes the
 right commitment) yet high holonomy deviation (it fails to transport that commitment
-consistently).
+consistently). Under the global-mode regime (Section~\ref{sec:reframing}), holonomy
+deviation primarily measures the overall fidelity of transport rather than layer-specific
+failure; the block-specific projections provide interpretable secondary vocabulary.
 
 % ------------------------------------------------------------------------------
 \subsection{Architectural Vision: Standpoint as a New Primitive}

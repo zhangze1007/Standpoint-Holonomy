@@ -32,8 +32,9 @@ disagreement between local representations propagated along edges. The key
 difference is the object being made consistent: sheaf networks enforce
 representational agreement across node features for a fixed graph, whereas our
 self-connection enforces standpoint agreement across causally ordered events in
-a DAG, with the additional structure that disagreement is attributed to a
-specific standpoint layer via the block decomposition of $\mathbf{F}_{ijk}$.
+a DAG, with the additional structure that disagreement can be projected onto
+specific standpoint layers via the block decomposition of $F_{ijk}$ (though the
+dominant signal is global; see Section~\ref{sec:reframing}).
 
 The Attention Schema Theory~\cite{graziano2017attention} explicitly targets AI
 but focuses on attention modelling rather than standpoint continuity. Our
@@ -55,9 +56,10 @@ properties.
 
 Linear probing~\cite{belinkov2021probing} trains a classifier on a layer's
 activations to predict whether a specific property is encoded. This answers
-\emph{what information a layer contains}. Curvature answers a complementary
-question: \emph{whether that information is preserved across events}. A layer
-can have high probing accuracy (it encodes the right commitment) yet high
-curvature (it fails to transport that commitment consistently). The two
-diagnostics are orthogonal: probing measures representational content, curvature
-measures transport fidelity. A complete diagnostic requires both.
+\emph{what information a layer contains}. Holonomy deviation answers a
+complementary question: \emph{whether that information is preserved across
+events}. A layer can have high probing accuracy (it encodes the right
+commitment) yet high holonomy deviation (it fails to transport that commitment
+consistently). The two diagnostics are orthogonal: probing measures
+representational content, holonomy deviation measures transport fidelity. A
+complete diagnostic requires both.

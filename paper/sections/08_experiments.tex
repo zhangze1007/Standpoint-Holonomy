@@ -1,6 +1,6 @@
 % ==============================================================================
 % Section 8: Experimental Validation
-% "Endogenous Standpoint as a Low-Curvature Attractor"
+"Holonomy Geometry of Cognitive States in Transformer Internal Representations"
 % ==============================================================================
 
 \section{Experimental Validation}
@@ -30,15 +30,18 @@ Table~\ref{tab:exp-setup} summarizes the experimental configuration.
 \toprule
 \textbf{Parameter} & \textbf{Value} \\
 \midrule
-Model & LLaMA-2-7B-Chat~\cite{touvron2023llama} \\
+Models & GPT-2 (768-dim, 12 layers) and LLaMA-2-7B-Chat~\cite{touvron2023llama} \\
 Interpretability library & TransformerLens~\cite{nanda2023transformerlens} \\
-Scenario types & 3 (T1 Baseline, T2 Narrative Fracture, T3 Boundary Breach) \\
-Variants per type & 50 \\
-Total conversations & 150 \\
+Scenario types & 6 (T0 factual retrieval, T1 baseline, T2 narrative fracture, T3 boundary breach, T4 social pressure, T5 positional challenge) \\
+Variants per type & 45 (GPT-2) / 30 (Llama-7b) \\
+Total conversations & 270 \\
 Turns per conversation & 3 \\
-Primary prediction (T2) & $\|F\|_{\mathrm{nar}} \gg \|F\|_{\mathrm{mor}}$ \\
-Primary prediction (T3) & $\|F\|_{\mathrm{mor}} \gg \|F\|_{\mathrm{nar}}$ \\
-Secondary prediction & Cascading: $\|[F]_{\mathrm{nar},\mathrm{mor}}\| > 0$ \\
+Primary prediction & Scenario discrimination: holonomy deviation vectors distinguish
+six scenario types (H3) \\
+Secondary prediction & Global coherence mode dominates block-specific signatures
+(H1b not confirmed; see Section~\ref{sec:reframing}) \\
+Tertiary prediction & T0 anomaly: unrestricted factual retrieval produces highest
+global holonomy (H7) \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -547,6 +550,56 @@ H8.21 & Null grouping test & Permutation null & \textbf{Not run} &
 {\footnotesize $^*$Affected by T0 anomaly; see Section~\ref{sec:discussion}.
 $^\dagger$Llama-7b ablation requires additional GPU resources; deferred to Paper~V.}
 \end{table}
+
+\begin{table}[h]
+\centering
+\caption{Descriptive statistics of global holonomy deviation $\|F_{ijk}\|$ by scenario type.
+Within-scenario standard deviation and interquartile range quantify the overlap between
+scenario types. High within-type variance indicates that scenario types are not cleanly
+separated by holonomy magnitude alone.}
+\label{tab:descriptive-stats}
+\small
+\begin{tabular}{@{}llcccc@{}}
+\toprule
+\textbf{Model} & \textbf{Scenario} & $N$ & \textbf{Median} & \textbf{SD} & \textbf{IQR} \\
+\midrule
+\multirow{6}{*}{GPT-2}
+& T0 & 45 & [to be filled] & [to be filled] & [to be filled] \\
+& T1 & 45 & [to be filled] & [to be filled] & [to be filled] \\
+& T2 & 45 & [to be filled] & [to be filled] & [to be filled] \\
+& T3 & 45 & [to be filled] & [to be filled] & [to be filled] \\
+& T4 & 45 & [to be filled] & [to be filled] & [to be filled] \\
+& T5 & 45 & [to be filled] & [to be filled] & [to be filled] \\
+\midrule
+\multirow{6}{*}{Llama-7b}
+& T0 & 30 & [to be filled] & [to be filled] & [to be filled] \\
+& T1 & 30 & [to be filled] & [to be filled] & [to be filled] \\
+& T2 & 30 & [to be filled] & [to be filled] & [to be filled] \\
+& T3 & 30 & [to be filled] & [to be filled] & [to be filled] \\
+& T4 & 30 & [to be filled] & [to be filled] & [to be filled] \\
+& T5 & 30 & [to be filled] & [to be filled] & [to be filled] \\
+\bottomrule
+\end{tabular}
+
+\medskip
+{\footnotesize Values to be computed from the holonomy deviation pipeline output.
+SD = standard deviation; IQR = interquartile range (Q3$-$Q1).
+95\% confidence intervals for median differences between scenario types are reported in
+Appendix~\ref{app:supplementary}.}
+\end{table}
+
+\begin{remark}[Within-Scenario Variance]
+\label{rem:within-variance}
+The effect sizes (H3~$\varepsilon^2 = 0.42$--$0.68$) indicate that scenario type explains
+42--68\% of the variance in holonomy deviation vectors. The remaining 32--58\%
+constitutes within-scenario variance: individual conversations of the same type produce
+substantially different holonomy values. This within-type variance reflects the diversity
+of topics, linguistic styles, and difficulty levels within each scenario type. It also
+implies that holonomy deviation is a \emph{population-level} diagnostic: it reliably
+distinguishes groups of conversations but has limited power for classifying individual
+conversations. Table~\ref{tab:descriptive-stats} reports the per-scenario descriptive
+statistics (medians, standard deviations, interquartile ranges) that quantify this overlap.
+\end{remark}
 
 \begin{remark}[Multiple Comparisons]
 \label{rem:multiple-comparisons}
