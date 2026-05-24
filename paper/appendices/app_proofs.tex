@@ -9,7 +9,16 @@
 This appendix provides complete, self-contained proofs for the key propositions and
 theorems stated in Section~\ref{sec:instantiation}. Each proof is presented in full
 detail to facilitate verification and to establish the logical foundations on which the
-main results rest. We recall the standing notation: $d$ is the residual stream dimension,
+main results rest.
+
+\paragraph{Self-citation note.}
+The companion papers Zhang (2025a, 2025b) formalize the abstract geometric and logical
+foundations of the LCESA framework and are currently under preparation for concurrent
+submission. All definitions and propositions cited from these works are reproduced in full
+in the present paper for self-contained readability; no result in the present paper
+depends on the companion papers for its proof.
+
+We recall the standing notation: $d$ is the residual stream dimension,
 $K = \{\mathrm{min}, \mathrm{nar}, \mathrm{soc}, \mathrm{mor}, \mathrm{pos}\}$ is the set
 of standpoint layers, $d_k = \dim(W_k)$ for each $k \in K$ with $\sum_k d_k = d$, and
 $P_{W_k}$ denotes the orthogonal projector onto the subspace $W_k$. All transport
@@ -134,7 +143,7 @@ not the intermediate event $x_j$ intervenes:
 \end{theorem}
 
 \begin{proof}
-The curvature tensor (Definition~\ref{def:curvature}) is defined by
+The holonomy deviation (Definition~\ref{def:curvature}) is defined by
 \[
     F_{ijk} = U_{ij} \cdot U_{jk} \cdot \big(U_{ik}^{\exp}\big)^{-1}.
 \]
@@ -601,3 +610,46 @@ Membership in $\mathcal{A}_{\mathrm{self}}$ is gauge-invariant
 (Definition~\ref{def:curvature}). This completes the formal bridge from the geometric
 framework to the commitment architecture.
 \end{proof}
+
+% ==============================================================================
+\section*{Appendix B: Value Matrix Orthonormality Measurement}
+\label{app:orthonorm}
+
+The derivation of the block-diagonal transport structure
+(Proposition~\ref{prop:block-structure}) requires $V_h^\top V_h = \mathrm{Id}_{d_v}$,
+i.e., the columns of each value matrix $V_h$ are orthonormal. This is not enforced by
+transformer training. We assess this assumption empirically by computing, for each
+attention head $h$, the deviation
+\[
+    \epsilon_h = \|V_h^\top V_h - \mathrm{Id}_{d_v}\|_F.
+\]
+
+\paragraph{GPT-2 (144 heads).}
+For GPT-2's 144 attention heads (12 layers $\times$ 12 heads, $d_v = 64$):
+\begin{itemize}
+    \item Mean $\bar{\epsilon}$: [to be filled after measurement]
+    \item Median $\tilde{\epsilon}$: [to be filled]
+    \item Maximum $\max_h \epsilon_h$: [to be filled]
+\end{itemize}
+
+\paragraph{Llama-2-7b-Chat (1024 heads).}
+For Llama-2-7b-Chat's 1024 attention heads (32 layers $\times$ 32 heads, $d_v = 128$):
+\begin{itemize}
+    \item Mean $\bar{\epsilon}$: [to be filled after measurement]
+    \item Median $\tilde{\epsilon}$: [to be filled]
+    \item Maximum $\max_h \epsilon_h$: [to be filled]
+\end{itemize}
+
+\paragraph{Interpretation.}
+When $\bar{\epsilon} < 0.1$, the orthonormality assumption is approximately satisfied and
+the derived block-diagonal structure holds to good approximation. When $\bar{\epsilon} >
+0.3$, significant off-diagonal cross-block contributions arise beyond those captured by
+the non-orthogonality parameter $\delta$. In either case, all holonomy computations in
+the main text use the empirically corrected projectors: rather than assuming $V_h V_h^\top
+= P_{\mathrm{range}(V_h)}$, we compute the actual projector via SVD of $V_h$ and use the
+resulting orthogonal basis for the subspace $W_k$.
+
+\paragraph{Computational note.}
+This measurement requires only the value projection matrices $V_h$, which are available
+from the pretrained model weights. No forward passes or conversation data are needed. The
+computation is $O(H \cdot d_v^3)$ (one SVD per head) and runs in seconds on CPU.

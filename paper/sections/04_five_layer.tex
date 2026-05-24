@@ -9,9 +9,26 @@
 Section~\ref{sec:geometric-framework} established the abstract fiber bundle with a
 finite index set $K$. We now instantiate $K = \{\mathrm{min}, \mathrm{nar},
 \mathrm{soc}, \mathrm{mor}, \mathrm{pos}\}$ and motivate each layer from empirical
-research in psychology and cognitive neuroscience. The five layers are mathematically
-independent subspaces of the fiber (Lemma~\ref{lem:decomposition} guarantees block-specific
-curvature decomposition), but functionally layered: $\psi_{\mathrm{min}}$ provides the
+research in psychology and cognitive neuroscience.
+
+\paragraph{Diagnostic projection interpretation.}
+The five-layer standpoint model introduced in this section is proposed as a theoretically
+motivated \textbf{diagnostic coordinate system} for analyzing transformer internal
+geometry. Each layer corresponds to a psychologically grounded dimension of selfhood
+(Sections~\ref{sec:psi-min}--\ref{sec:psi-pos}), and together they define a projection
+basis $\{\Pi_k\}_{k \in K}$ for decomposing the total holonomy deviation. We make no claim
+that transformer internals are ontologically organized into five independent modules ---
+the empirical results in Section~\ref{sec:experiments} show that the five block-specific
+holonomy norms are highly correlated ($r > 0.97$), indicating a dominant global mode
+rather than five independent dimensions. The five-layer decomposition is therefore
+interpreted as an interpretable projection basis onto psychologically meaningful axes, not
+as a decomposition into causally independent cognitive processes. Its diagnostic value
+lies in providing a structured vocabulary for describing where holonomy concentrates, while
+the primary empirical signal is global in nature.
+
+The five layers are mathematically independent subspaces of the fiber
+(Lemma~\ref{lem:decomposition} guarantees block-specific holonomy deviation
+decomposition), but functionally layered: $\psi_{\mathrm{min}}$ provides the
 foundational self-model upon which narrative continuity, social framing, moral commitment,
 and positional trajectory are successively constructed. Cross-layer propagation of
 standpoint drift occurs through the off-diagonal blocks of the connection $U_{ij}$

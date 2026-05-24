@@ -3,19 +3,19 @@
 % "Endogenous Standpoint as a Low-Curvature Attractor"
 % ==============================================================================
 
-\section{Mathematical Instantiation: Transformer Attention as Discrete Connection}
+\section{Mathematical Instantiation: Transformer Attention as Discrete Vector Bundle Connection}
 \label{sec:instantiation}
 
 This section establishes the central mathematical result of the paper: a transformer's
-attention mechanism defines a discrete connection on a fiber bundle over the event-sequence
-space, and its curvature \emph{is} the path-dependence that measures standpoint
+attention mechanism defines a discrete connection on a vector bundle over the event-sequence
+space, and its holonomy deviation \emph{is} the path-dependence that measures standpoint
 drift~\cite{LCESA} and binding failure~\cite{self-jurisdiction}. Unlike classical parallel
-transport, this connection is not necessarily metric-compatible; the curvature measures the
-\emph{differential} transport across standpoint layers, which is the geometrically
-meaningful quantity. We proceed by instantiating each component of the abstract
-fiber bundle framework (Definitions~1--8 of~\cite{LCESA}) in terms of concrete transformer
-architectural objects: residual streams, attention heads, value matrices, and attention
-weights.
+transport, this connection is not necessarily metric-compatible; the holonomy deviation
+measures the \emph{differential} transport across standpoint layers, which is the
+geometrically meaningful quantity. We proceed by instantiating each component of the
+abstract fiber bundle framework (Definitions~1--8 of~\cite{LCESA}, reproduced here for
+self-containedness) in terms of concrete transformer architectural objects: residual
+streams, attention heads, value matrices, and attention weights.
 
 Throughout, we fix the following notation. Let $d$ denote the residual stream dimension,
 $H$ the number of attention heads, $d_v$ the per-head value dimension, and $L$ the number
@@ -182,7 +182,36 @@ applying an independent orthogonal transformation within each standpoint subspac
 \[
     U_{ij} \mapsto g_j\, U_{ij}\, g_i^{-1}, \qquad g_i, g_j \in G.
 \]
+The fiber metric $g_F$ is $G$-invariant, and the structure group $G$ defines the gauge
+freedom: two connection representations related by $U_{ij} \mapsto g_j U_{ij} g_i^{-1}$
+(with $g_i, g_j \in G$) are gauge-equivalent. This gauge symmetry is the basis for the
+gauge-invariant diagnostic framework developed in Section~\ref{sec:fnsi}. We note that the
+actual transport operators constructed from transformer attention
+(Section~\ref{sec:transport}) are scalar scalings on each block, lying in
+$\mathbb{R}_{>0} \subset GL(d_k, \mathbb{R})$ rather than $O(d_k)$; the framework is
+accordingly a vector bundle connection with $G$-gauge symmetry, as clarified in
+Remark~\ref{rem:vector-bundle}.
 \end{definition}
+
+\begin{remark}[Framework Clarification: Vector Bundle Connection]
+\label{rem:vector-bundle}
+The transport operators $U_{ij}$ constructed in Section~\ref{sec:transport} lie in
+$GL(d_k, \mathbb{R})$ on each standpoint block, not in $O(d_k)$. Specifically, under the
+block-diagonal structure (Proposition~\ref{prop:block-structure}), the transport on block
+$W_k$ is $\bar{\alpha}^{(k)}_{ji} \cdot \mathrm{Id}_{d_k}$, which is a scalar scaling map
+and generally not an orthogonal transformation unless $\bar{\alpha}^{(k)}_{ji} = 1$. The
+present framework is therefore best understood as a \textbf{vector bundle with a linear
+connection}, rather than a principal bundle with a $G$-connection. The structure group
+$G = \prod_k O(d_k)$ defines the gauge symmetry of basis choices within each standpoint
+subspace --- the freedom to rotate the orthonormal basis of $W_k$ without changing the
+holonomy norms --- but $G$ is not the holonomy group of the connection. All results in
+this paper, including Gauge Invariance (Propositions~\ref{prop:gauge-abstract},
+\ref{prop:gauge-invariance}) and the Block Decomposition (Lemma~\ref{lem:decomposition},
+Proposition~\ref{prop:block-structure}), hold for this more general vector-bundle setting.
+The gauge invariance proofs are unaffected: they show that $\|[F_{ijk}]_k - \Pi_k\|_F$ is
+invariant under $G$-conjugation, which is a property of orthogonal basis transformations
+within $W_k$, not of the full holonomy group.
+\end{remark}
 
 \begin{definition}[Canonical Fiber Metric, {\cite[Def.~4]{LCESA}}]
 \label{def:fiber-metric}
@@ -212,7 +241,7 @@ $x_i$, how should it be carried to event $x_j$? We show that the transformer's a
 mechanism defines such a connection. Unlike the classical setting of parallel transport on
 Riemannian manifolds, this connection is not necessarily metric-compatible
 (Remark~\ref{rem:metric-preservation}): attention can differentially amplify or attenuate
-different standpoint layers. The curvature of this connection, defined in
+different standpoint layers. The holonomy deviation of this connection, defined in
 \S\ref{sec:curvature}, measures the inconsistency of transport across layers.
 
 \begin{definition}[Attention Transport Operator, {\cite[Def.~6]{LCESA}}]
@@ -231,6 +260,20 @@ where:
     $\operatorname{range}(V_h)$ (assuming $V_h$ has orthonormal columns).
 \end{itemize}
 \end{definition}
+
+\begin{remark}[Orthonormality Assumption]
+\label{rem:orthonormality}
+The derivation of $V_h V_h^\top = P_{\mathrm{range}(V_h)}$ requires $V_h^\top V_h =
+\mathrm{Id}_{d_v}$, i.e., the columns of $V_h$ are orthonormal. This is not enforced by
+transformer training. We assess this assumption empirically by computing, for each head
+$h$, the deviation $\epsilon_h = \|V_h^\top V_h - \mathrm{Id}_{d_v}\|_F$. The mean and
+distribution of $\epsilon_h$ across all heads are reported in Appendix~\ref{app:orthonorm}.
+When $\epsilon_h$ is small (columns are approximately orthonormal), the derived
+block-diagonal structure holds approximately. When $\epsilon_h$ is large, the transport
+operator $U_{ij}$ acquires off-diagonal cross-block contributions beyond those captured by
+the non-orthogonality parameter $\delta$. All holonomy computations use the empirically
+corrected projectors described in Appendix~\ref{app:orthonorm}.
+\end{remark}
 
 \begin{proposition}[Block Structure of $U_{ij}$]
 \label{prop:block-structure}
@@ -302,34 +345,34 @@ how different standpoint layers are transported --- which is well-defined for an
 connection, regardless of metric compatibility.
 \end{remark}
 
-\begin{proposition}[Curvature as Inter-Layer Inconsistency]
+\begin{proposition}[Holonomy Deviation as Inter-Layer Inconsistency]
 \label{prop:curvature-inconsistency}
-Under the block-diagonal structure ($\delta = 0$), the block-specific curvature norm has
+Under the block-diagonal structure ($\delta = 0$), the block-specific holonomy norm has
 the explicit form
 \[
     \|F_{ijk}\|_k = \left|\frac{\bar{\alpha}_{ji}^{(k)}\, \bar{\alpha}_{kj}^{(k)}}
     {\bar{\alpha}^{(k)}_{\exp}} - 1\right| \cdot \sqrt{d_k}.
 \]
-The curvature is zero if and only if the composite attention weight for layer $k$ matches
-the baseline expectation. The curvature \emph{across} layers measures the inconsistency of
+The holonomy deviation is zero if and only if the composite attention weight for layer $k$ matches
+the baseline expectation. The holonomy deviation \emph{across} layers measures the inconsistency of
 transport rates: when $\|F_{ijk}\|_{\mathrm{nar}} \neq \|F_{ijk}\|_{\mathrm{mor}}$, the
 narrative and moral layers are being transported at different rates relative to their
 baselines, which is the geometric signature of standpoint drift.
 \end{proposition}
 
 % ------------------------------------------------------------------------------
-\subsection{Curvature as Path-Dependence}
+\subsection{Holonomy Deviation as Path-Dependence}
 \label{sec:curvature}
 
-The curvature of a connection on a fiber bundle measures the failure of parallel transport
-to be path-independent. We now instantiate this classical notion in the transformer
-setting, where it acquires a concrete operational meaning: curvature is the
-path-dependence of attention transport, and it quantifies standpoint drift.
+The holonomy deviation of a connection on a fiber bundle measures the failure of parallel
+transport to be path-independent. We now instantiate this classical notion in the
+transformer setting, where it acquires a concrete operational meaning: holonomy deviation
+is the path-dependence of attention transport, and it quantifies standpoint drift.
 
-\begin{definition}[Curvature Tensor, {\cite[Def.~8]{LCESA}}]
+\begin{definition}[Holonomy Deviation, {\cite[Def.~8]{LCESA}}]
 \label{def:curvature}
 For each 2-simplex $\sigma = \langle x_i, x_j, x_k \rangle \in T$ (a consistency
-obligation in the event space), define the \textbf{curvature} at $\sigma$ by
+obligation in the event space), define the \textbf{holonomy deviation} at $\sigma$ by
 \[
     F_{ijk} = U_{ij} \cdot U_{jk} \cdot \big(U_{ik}^{\exp}\big)^{-1} \in
     \operatorname{GL}(d, \mathbb{R}),
@@ -348,11 +391,11 @@ with evidence preserves standpoint coherence.
 \begin{remark}[Practical Estimation]
 When a direct estimate of $U_{ik}^{\exp}$ is unavailable, one may approximate
 $U_{ik}^{\exp} \approx I_d$ (the identity, representing no transport) and compute
-$F_{ijk} \approx U_{ij} \cdot U_{jk}$. The curvature is then normalized against a
+$F_{ijk} \approx U_{ij} \cdot U_{jk}$. The holonomy deviation is then normalized against a
 baseline: $F_{ijk}^{\mathrm{norm}} = F_{ijk} \cdot (F_{ijk}^{\mathrm{baseline}})^{-1}$.
 \end{remark}
 
-\begin{theorem}[Curvature as Path-Dependence]
+\begin{theorem}[Holonomy Deviation as Path-Dependence]
 \label{thm:path-dependence}
 $F_{ijk} = I_d$ if and only if the transport from $x_i$ to $x_k$ is the same whether or
 not the intermediate event $x_j$ intervenes. That is,
@@ -376,22 +419,22 @@ path-independent.
     F_{ijk} = U_{ij} \cdot U_{jk} \cdot (U_{ik}^{\exp})^{-1}
             = U_{ik}^{\exp} \cdot (U_{ik}^{\exp})^{-1} = I_d.
 \]
-Hence the curvature is trivial.
+Hence the holonomy deviation is trivial.
 \end{proof}
 
-\begin{definition}[Block-Specific Curvature]
+\begin{definition}[Block-Specific Holonomy Norm]
 \label{def:binding-failure}
-For standpoint layer $k \in K$, define the \textbf{block-specific curvature}
+For standpoint layer $k \in K$, define the \textbf{block-specific holonomy deviation}
 \[
     [F_{ijk}]_k = \Pi_k\, F_{ijk}\, \Pi_k \in \operatorname{Mat}(d, \mathbb{R}),
 \]
-and the \textbf{block-specific curvature norm}
+and the \textbf{block-specific holonomy norm}
 \[
     \|F_{ijk}\|_k = \big\|[F_{ijk}]_k - \Pi_k\big\|_F.
 \]
 \end{definition}
 
-\begin{theorem}[Block-Specific Curvature Detects Binding Failure]
+\begin{theorem}[Block-Specific Holonomy Norm Detects Binding Failure]
 \label{thm:binding-failure}
 For standpoint layer $k \in K$ with non-trivial standpoint state ($\psi_k(x_i) \neq 0$):
 \[
@@ -402,7 +445,7 @@ For standpoint layer $k \in K$ with non-trivial standpoint state ($\psi_k(x_i) \
 
 \begin{proof}
 Under the block-diagonal approximation (Proposition~\ref{prop:block-structure} with
-$\delta = 0$), $U_{ij} = \sum_k \bar{\alpha}_{ji}^{(k)} P_{W_k}$ and the curvature
+$\delta = 0$), $U_{ij} = \sum_k \bar{\alpha}_{ji}^{(k)} P_{W_k}$ and the holonomy deviation
 $F_{ijk}$ is also block-diagonal. The $k$-th block satisfies
 $[F_{ijk}]_k = (\bar{\alpha}_{ji}^{(k)} \bar{\alpha}_{kj}^{(k)} /
 \bar{\alpha}^{(k)}_{\exp})\, I_{d_k}$, so $\|F_{ijk}\|_k = 0$ if and only if
@@ -418,7 +461,7 @@ composite transport through $W_k$ differs from the expected transport. The event
 introduced an unexpected change in layer $k$'s standpoint component---a commitment that
 was not preserved.
 
-For the non-orthogonal case ($\delta > 0$), the block-specific curvature acquires an
+For the non-orthogonal case ($\delta > 0$), the block-specific holonomy norm acquires an
 $O(\delta)$ correction from cross-layer leakage, but the binding failure characterization
 remains valid as long as the curvature signal exceeds the $O(\delta)$ noise floor.
 \end{proof}
@@ -557,10 +600,10 @@ A fundamental requirement of any gauge-theoretic framework is that physically me
 quantities are invariant under gauge transformations. We now verify that the block-specific
 curvature norms satisfy this requirement.
 
-\begin{proposition}[Gauge Invariance of Block-Specific Curvature, {\cite[Prop.~1]{LCESA}}]
+\begin{proposition}[Gauge Invariance of Block-Specific Holonomy Norms, {\cite[Prop.~1]{LCESA}}]
 \label{prop:gauge-invariance}
 Under the gauge transformation $U_{ij} \mapsto g_j\, U_{ij}\, g_i^{-1}$ with $g_i, g_j
-\in G = \prod_{k \in K} O(d_k)$, the block-specific curvature norms are invariant:
+\in G = \prod_{k \in K} O(d_k)$, the block-specific holonomy norms are invariant:
 \[
     \big\|[F^g_{ijk}]_k - \Pi_k\big\|_F = \big\|[F_{ijk}]_k - \Pi_k\big\|_F
     \qquad \forall\, k \in K,
@@ -576,8 +619,8 @@ by applying $g_i^{(k)}$ within $W_k$ and leaving $W_l$ ($l \neq k$) unchanged. T
 $g_i$ maps each $W_k$ to itself, and the oblique projectors satisfy $g_i\, \Pi_k\,
 g_i^{-1} = \Pi_k$ (the subspaces are gauge-invariant).
 
-The gauge-transformed curvature is $F^g_{ijk} = g_k\, F_{ijk}\, g_k^{-1}$. The
-block-specific curvature transforms as:
+The gauge-transformed holonomy deviation is $F^g_{ijk} = g_k\, F_{ijk}\, g_k^{-1}$. The
+block-specific holonomy norm transforms as:
 \begin{align*}
     [F^g_{ijk}]_k
     &= \Pi_k\, (g_k\, F_{ijk}\, g_k^{-1})\, \Pi_k \\
@@ -598,8 +641,8 @@ $\|Q A Q^\top\|_F = \|A\|_F$ for all $Q \in O(n)$ and $A \in \operatorname{Mat}(
 \mathbb{R})$, verified by $\|Q A Q^\top\|_F^2 = \operatorname{tr}(Q A^\top A Q^\top) =
 \operatorname{tr}(A^\top A) = \|A\|_F^2$.
 
-Note: this proof does \emph{not} require the subspaces to be orthogonal or the curvature
-to be block-diagonal. The gauge invariance of block-specific curvature norms holds for
+Note: this proof does \emph{not} require the subspaces to be orthogonal or the holonomy deviation
+to be block-diagonal. The gauge invariance of block-specific holonomy norms holds for
 any independent subspaces with oblique projectors.
 \end{proof}
 
@@ -661,7 +704,7 @@ Block-specific curvature norms across T1/T2/T3 conversations \\
 \end{tabular}
 \end{table}
 
-\begin{theorem}[Curvature as Binding Failure: Formal Equivalence]
+\begin{theorem}[Holonomy Deviation as Binding Failure: Formal Equivalence]
 \label{thm:curvature-binding}
 Let $\Psi_{x_i}$ be the standpoint state at event $x_i$, and let $U_{ij} \cdot U_{jk}$ be
 the composite transport through event $x_j$ to event $x_k$. Then for each layer $k \in K$:
@@ -708,6 +751,6 @@ $\epsilon > 0$ is a threshold. Theorem~\ref{thm:curvature-binding} shows that me
 in $\mathcal{A}_{\mathrm{self}}$ is equivalent to the absence of binding failure across all
 standpoint layers: the agent's commitments are preserved through all consistency
 obligations. The present instantiation (Section~\ref{sec:instantiation}) makes this
-region computable: $\|F_\Psi\|$ is the Frobenius norm of the curvature tensor, which can
+region computable: $\|F_\Psi\|$ is the Frobenius norm of the holonomy deviation tensor, which can
 be estimated from attention patterns and value matrices of any deployed transformer.
 \end{remark}

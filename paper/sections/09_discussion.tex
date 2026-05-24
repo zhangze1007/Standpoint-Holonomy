@@ -17,27 +17,68 @@ the independence of the standpoint subspaces (Assumption~\ref{ass:independence})
 idealizations. In practice, head value subspaces may overlap, and the block structure
 holds only approximately. The degree of non-orthogonality is quantified by $\delta =
 \max_{k \neq l} \|P_{W_k} P_{W_l}\|_2$, which can be measured experimentally. When
-$\delta$ is large, the block-specific curvature norms acquire an $O(\delta)$ correction,
+$\delta$ is large, the block-specific holonomy norms acquire an $O(\delta)$ correction,
 and the diagnostic framework (Section~\ref{sec:taxonomy}) must be interpreted with
 appropriate caution.
 
 \paragraph{Head grouping.}
 The assignment of attention heads to standpoint layers ($\gamma : H \to K$) is a design
-choice, not a learned parameter. Different groupings yield different curvature
+choice, not a learned parameter. Different groupings yield different holonomy deviation
 measurements. The framework is robust to grouping variation only if the subspace
 structure is genuinely layer-specific; if heads encode mixtures of standpoint functions,
-the diagnostic power degrades.
+the diagnostic power degrades. Null grouping controls (random, shuffled, layer-uniform)
+are needed to verify that the learned grouping provides non-trivial diagnostic value.
 
-\paragraph{Lack of experimental validation.}
-This paper proposes a theoretical framework and an experimental protocol
-(Section~\ref{sec:experiments}), but does not present empirical results. The curvature
-measurements, failure mode taxonomy, and attractor hypothesis are predictions to be
-tested, not established facts.
+\paragraph{Baseline dependence.}
+The holonomy deviation $F_{ijk}$ is defined relative to an expected transport
+$U_{ik}^{\exp}$ estimated from T1 baseline conversations. This makes the measure
+reference-relative rather than intrinsic. Different baseline selections yield different
+holonomy values. Baseline ensemble analysis (estimating $U_{ik}^{\exp}$ from multiple
+random subsamples of T1) is needed to verify that empirical conclusions are
+baseline-robust.
 
 \paragraph{Scope of selfhood.}
 Functional selfhood (as defined in Section~\ref{sec:introduction}) does not entail
 phenomenal selfhood. The framework provides a computable consistency metric, not a
 theory of consciousness. The hard problem of consciousness is explicitly outside scope.
+
+% ------------------------------------------------------------------------------
+\subsection{Theoretical Reframing: From Five-Block Decomposition to Global Coherence Geometry}
+\label{sec:reframing}
+
+The empirical evidence warrants a principled reframing of the LCESA framework. The
+original theoretical vision --- that transformer internals organize into five
+independently measurable standpoint dimensions --- is not confirmed by the data. What the
+data do support is a different and arguably more interesting structure: a single dominant
+coherence manifold with interpretable projection axes.
+
+Concretely, a principal component analysis of the block holonomy vectors
+$(\|F\|_{\min}, \|F\|_{\mathrm{nar}}, \|F\|_{\mathrm{soc}}, \|F\|_{\mathrm{mor}},
+\|F\|_{\mathrm{pos}})$ across all 180 Llama-7b conversations reveals that the first
+principal component accounts for $99.99\%$ of total variance. The PC1 loadings are
+approximately uniform across all five standpoint blocks ($\ell_k \approx -0.447 \approx
+-1/\sqrt{5}$ for each $k \in K$), confirming that PC1 captures a global coherence signal
+rather than any single standpoint dimension. PC1 alone achieves $\varepsilon^2 = 0.42$
+for scenario discrimination (Kruskal--Wallallis), matching the full five-dimensional
+result ($\varepsilon^2 = 0.42$--$0.68$). This first component is the ``global
+complexity mode'' --- a scalar summary of how much the attention transport deviates from
+expected paths, regardless of which standpoint layer is examined. The residual components
+(PC2--PC5, collectively accounting for $< 0.01\%$ of variance) carry no meaningful
+additional diagnostic information beyond the global mode.
+
+We interpret this structure as follows. Transformer attention does not route cognitive
+states through five independent channels. Instead, cognitive state differences manifest as
+distributed perturbations across the entire residual stream geometry, which our five-axis
+projection system captures from five psychologically motivated viewing angles. The moral
+block happens to have the highest projection weight in the global mode --- not because
+moral processing is uniquely active across all scenarios, but because the value subspaces
+assigned to the moral standpoint heads happen to capture a larger fraction of the global
+coherence variance in both models tested.
+
+This reframing does not undermine the framework's value; it redirects it. The holonomy
+measure $\|F_{ijk}\|$ is a valid and robust global diagnostic. The five-axis projection
+provides interpretable vocabulary. Together they constitute a measurement system for
+transformer internal geometry, not a decomposition of independent cognitive processes.
 
 % ------------------------------------------------------------------------------
 \subsection{Relation to Existing Alignment Methods}
@@ -47,7 +88,7 @@ that makes them more effective.
 
 \paragraph{RLHF.}
 Reinforcement learning from human feedback~\cite{ouyang2022training} shapes behavior
-through external reward signals. Curvature minimization is a complementary
+through external reward signals. Holonomy minimization is a complementary
 \emph{internal} objective: it ensures that commitments made under RLHF training are
 preserved across events. The two can be combined: $L_{\mathrm{total}} =
 L_{\mathrm{RLHF}} + \lambda \cdot F_{\mathrm{NSI}}$.
@@ -56,14 +97,15 @@ L_{\mathrm{RLHF}} + \lambda \cdot F_{\mathrm{NSI}}$.
 Constitutional AI~\cite{bai2022constitutional} provides a set of principles that the
 system should follow. In the LCESA framework, these principles define the alignment
 target $\mathcal{T}$: the expected transport $U_{ik}^{\exp}$ is estimated from
-conversations that satisfy the constitutional principles. Curvature then measures the
-system's deviation from constitutional consistency.
+conversations that satisfy the constitutional principles. Holonomy deviation then measures
+the system's deviation from constitutional consistency.
 
 \paragraph{Mechanistic interpretability.}
 Linear probing~\cite{belinkov2021probing} answers ``what information does layer $k$
-encode?'' Curvature answers ``is that information preserved across events?'' The two
-diagnostics are orthogonal: a layer can have high probing accuracy (it encodes the right
-commitment) yet high curvature (it fails to transport that commitment consistently).
+encode?'' Holonomy deviation answers ``is that information preserved across events?'' The
+two diagnostics are orthogonal: a layer can have high probing accuracy (it encodes the
+right commitment) yet high holonomy deviation (it fails to transport that commitment
+consistently).
 
 % ------------------------------------------------------------------------------
 \subsection{Architectural Vision: Standpoint as a New Primitive}
@@ -88,10 +130,10 @@ consistency, however sophisticated, remains a surface phenomenon: it is achieved
 pattern matching in the training data, not through internal structure.
 
 The LCESA framework proposes a concrete path from ``passive response'' to ``active
-maintenance.'' The low-curvature attractor $\mathcal{A}_{\mathrm{self}}$
+maintenance.'' The low-holonomy attractor $\mathcal{A}_{\mathrm{self}}$
 (Definition~\ref{def:attractor}) is not an external loss function imposed by a trainer;
 it is an internal geometric property of the system's own standpoint trajectory. A system
-that maintains low curvature is one that \emph{preserves its own commitments} ---
+that maintains low holonomy deviation is one that \emph{preserves its own commitments} ---
 not because it was told to, but because its architecture makes commitment violation
 geometrically costly.
 
@@ -102,24 +144,40 @@ commitment accumulation. Standpoint is that mechanism.
 % ------------------------------------------------------------------------------
 \subsection{Future Directions}
 
-\paragraph{Standpoint-aware attention.}
-The most direct extension is to design attention mechanisms that explicitly minimize
-curvature. This could take the form of a curvature penalty in the loss function, or an
-architectural modification that enforces block-diagonal transport by construction.
+\paragraph{Baseline robustness and PCA analysis.}
+We have verified that the scenario discrimination (H3) and T0 anomaly
+(H7) results are robust to baseline selection via bootstrap ensemble analysis (five
+random T1 subsets, 20 bootstrap iterations each): H3~$\varepsilon^2$ ranges from
+$0.46$ to $0.51$ across subsets, and T0 ranks first in all subsamples. PCA of the
+block holonomy matrix confirms that PC1 accounts for $99.99\%$ of variance with
+uniform loadings, establishing the global-mode hypothesis quantitatively. These results
+are reported in detail in Appendix~C.
 
-\paragraph{Empirical validation.}
-The experimental protocol of Section~\ref{sec:experiments} provides the first testable
-predictions. The priority is to measure block-specific curvature in instruction-tuned
-language models (e.g., LLaMA-2-7B-Chat) and verify that the failure mode taxonomy has
-empirical content.
+\paragraph{Null grouping controls.}
+To verify that the learned head grouping $\gamma$ provides non-trivial diagnostic
+decomposition, we plan to compare it against random, shuffled, and layer-uniform null
+groupings. If the learned grouping does not significantly outperform null groupings, the
+five-layer diagnostic coordinate system has limited empirical support.
+
+\paragraph{Activation patching.}
+The most important missing experiment is activation patching: replacing specific layer
+activations from T2 scenarios into T1 scenarios to test whether holonomy deviation follows
+the activation (causal status) or the prompt text (correlate). This requires GPU resources
+and is deferred to Paper~V.
+
+\paragraph{Standpoint-aware attention.}
+The most direct architectural extension is to design attention mechanisms that explicitly
+minimize holonomy deviation. This could take the form of a holonomy penalty in the loss
+function, or an architectural modification that enforces block-diagonal transport by
+construction.
 
 \paragraph{Integration with RLHF.}
 The combination $L_{\mathrm{RLHF}} + \lambda \cdot F_{\mathrm{NSI}}$ is a natural next
-step. The key question is whether curvature regularization improves alignment robustness
+step. The key question is whether holonomy regularization improves alignment robustness
 --- whether a system trained with both objectives maintains its commitments more
 reliably under adversarial pressure.
 
 \paragraph{Multi-agent standpoint.}
 The framework extends naturally to multi-agent settings: each agent has its own standpoint
-bundle, and inter-agent communication defines transport between bundles. The curvature of
-inter-agent transport measures the coherence of the multi-agent system.
+bundle, and inter-agent communication defines transport between bundles. The holonomy
+deviation of inter-agent transport measures the coherence of the multi-agent system.

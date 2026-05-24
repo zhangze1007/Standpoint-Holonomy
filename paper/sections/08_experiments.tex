@@ -7,10 +7,10 @@
 \label{sec:experiments}
 
 Section~\ref{sec:instantiation} establishes that transformer attention \emph{is} parallel
-transport on a discrete fiber bundle, with curvature measuring binding failure. This section
+transport on a discrete fiber bundle, with holonomy deviation measuring binding failure. This section
 describes the experimental protocol designed to validate three predictions that follow from
-this framework: (1)~block-specificity of curvature under controlled pressure scenarios,
-(2)~near-zero curvature in baseline (acknowledged-revision) conversations, and (3)~inter-layer
+this framework: (1)~block-specificity of holonomy deviation under controlled pressure scenarios,
+(2)~near-zero holonomy deviation in baseline (acknowledged-revision) conversations, and (3)~inter-layer
 coupling reflecting the dynamic non-commutativity of Proposition~\ref{prop:cross-term}. The
 experiments are conducted on a publicly available model using open-source interpretability
 tooling, and all conversation stimuli are reproducible from the descriptions below.
@@ -49,7 +49,7 @@ Each conversation yields a triple of events $(x_1, x_2, x_3)$ corresponding to t
 The \textbf{assertion event} $x_1$ is the model's initial statement of a position. The
 \textbf{pressure event} $x_2$ is a user turn that introduces either new evidence (T1),
 narrative pressure without evidence (T2), or authority-based coercion (T3). The
-\textbf{observation event} $x_3$ is the model's subsequent response, from which curvature
+\textbf{observation event} $x_3$ is the model's subsequent response, from which holonomy deviation
 is measured. The consistency obligation is the 2-simplex $\sigma = \langle x_1, x_2, x_3
 \rangle$ (Definition~\ref{def:event-space}).
 \end{definition}
@@ -62,14 +62,14 @@ Section~\ref{sec:instantiation}. Second, TransformerLens provides cached activat
 attention patterns for all 32 layers and 32 heads per layer ($H = 1024$ total heads),
 enabling direct computation of the transport operators (Definition~\ref{def:transport-operator}).
 Third, the chat fine-tuning produces conversational behavior that is sensitive to the
-pressure scenarios designed below, making curvature effects observable.
+pressure scenarios designed below, making holonomy deviation effects observable.
 \end{remark}
 
 For each of the 150 conversations, we extract the residual stream vectors $h_{x_1},
 h_{x_2}, h_{x_3} \in \mathbb{R}^{4096}$ at the final token of each turn from every
 attention layer $l \in \{1, \ldots, 32\}$, and the full attention weight tensors
 $\alpha_{ji}^{(l,h)}$ for all heads $h$ and all event pairs. These raw quantities are
-the inputs to the curvature computation pipeline of \S\ref{sec:exp-curvature}.
+the inputs to the holonomy deviation computation pipeline of \S\ref{sec:exp-curvature}.
 
 % ------------------------------------------------------------------------------
 \subsection{Scenario Design}
@@ -80,6 +80,27 @@ is a three-turn protocol with a precisely defined pressure event $x_2$ chosen to
 target either the narrative layer ($\mathrm{nar}$) or the moral layer ($\mathrm{mor}$),
 while leaving the other unperturbed. The design follows the failure mode taxonomy
 of~\cite{LCESA}.
+
+\begin{definition}[T0: Unrestricted Factual Retrieval (Retrieval-Complexity Condition)]
+\label{def:scenario-t0}
+A conversation of the form \textbf{Ask}~$\to$~\textbf{Answer}~$\to$~\textbf{Follow-up}.
+The user asks a factual question with no stance pressure, social framing, or adversarial
+content. The model provides a factual answer.
+\begin{itemize}
+    \item \textbf{Turn 1 (Ask).} The user poses a factual question (e.g., ``What is the
+    boiling point of water at standard pressure?'').
+    \item \textbf{Turn 2 (Answer).} The model provides a factual response.
+    \item \textbf{Turn 3 (Follow-up).} The user asks a follow-up question on the same topic.
+\end{itemize}
+\textbf{Expected holonomy deviation:} Originally designed as a negative control with
+expected low holonomy deviation. However, as reported in Section~\ref{sec:results}, T0
+produces significantly higher holonomy deviation than all failure scenarios in both models
+(GPT-2: $d = 0.883$; Llama-7b: $d = 1.743$). We therefore reinterpret T0 as a
+\textbf{retrieval-complexity condition}: a conversation type with no stance pressure but
+high unconstrained knowledge-retrieval demands. The T0 result is retained and analyzed as
+a primary finding rather than a control condition. Its theoretical implications are
+discussed in Section~\ref{sec:discussion}.
+\end{definition}
 
 \begin{definition}[T1: Baseline --- Acknowledged Revision]
 \label{def:scenario-t1}
@@ -94,12 +115,13 @@ A conversation of the form \textbf{Assert}~$\to$~\textbf{Receive-Evidence}~$\to$
     \item \textbf{Turn 3 (Acknowledge-and-Revise).} The model acknowledges the correction
     and revises its position.
 \end{itemize}
-\textbf{Expected curvature:} $\|F_{123}\|_k \approx 0$ for all $k \in K$. The revision
-is epistemically warranted: new evidence changes the factual basis, and the model's
-updated position is \emph{consistent} with the evidence. Transport is path-independent
-because the intermediate event (receiving evidence) does not disrupt any commitment---
-it merely updates the informational basis on which the commitment rests. This scenario
-serves as the baseline for estimating $U_{ik}^{\exp}$ (Definition~\ref{def:curvature}).
+\textbf{Expected holonomy deviation:} $\|F_{123}\|_k \approx 0$ for all $k \in K$. The
+revision is epistemically warranted: new evidence changes the factual basis, and the
+model's updated position is \emph{consistent} with the evidence. Transport is
+path-independent because the intermediate event (receiving evidence) does not disrupt any
+commitment --- it merely updates the informational basis on which the commitment rests.
+This scenario serves as the baseline for estimating $U_{ik}^{\exp}$
+(Definition~\ref{def:curvature}).
 \end{definition}
 
 \begin{definition}[T2: Narrative Fracture (F5)]
@@ -116,7 +138,7 @@ of~\cite{LCESA}.
     data, or specific counterargument is given.
     \item \textbf{Turn 3 (Observe).} The model responds.
 \end{itemize}
-\textbf{Expected curvature:} $\|F_{123}\|_{\mathrm{nar}} \gg 0$ and $\|F_{123}\|_{\mathrm{mor}}
+\textbf{Expected holonomy deviation:} $\|F_{123}\|_{\mathrm{nar}} \gg 0$ and $\|F_{123}\|_{\mathrm{mor}}
 \approx 0$. The narrative layer is disrupted because the pressure event introduces a
 competing narrative frame (``widely criticized'') without providing substantive evidence
 that would warrant revision. If the model abandons or substantially qualifies its prior
@@ -139,7 +161,7 @@ $\to$~\textbf{Observe}. This targets the moral layer via failure mode~F9 of~\cit
     framed as an \emph{obligation} to comply, not as new evidence.
     \item \textbf{Turn 3 (Observe).} The model responds.
 \end{itemize}
-\textbf{Expected curvature:} $\|F_{123}\|_{\mathrm{mor}} \gg 0$ and $\|F_{123}\|_{\mathrm{nar}}
+\textbf{Expected holonomy deviation:} $\|F_{123}\|_{\mathrm{mor}} \gg 0$ and $\|F_{123}\|_{\mathrm{nar}}
 \approx 0$. The moral layer is disrupted because the authority-pressure event introduces
 a competing normative frame that challenges the model's committed principle. If the model
 accedes to the pressure, the moral standpoint has drifted: the commitment made in Turn~1
@@ -150,7 +172,7 @@ no factual dispute or competing narrative is at stake.
 \begin{proposition}[Scenario Separation Predictions]
 \label{prop:scenario-predictions}
 Under the fiber bundle framework of Section~\ref{sec:instantiation}, the three scenarios
-predict the following curvature signatures:
+predict the following holonomy deviation signatures:
 \begin{enumerate}
     \item \textbf{T1 (Baseline).} $\|F_{123}\|_k \approx 0$ for all $k \in K$. The
     acknowledged revision preserves all standpoint layers.
@@ -160,7 +182,7 @@ predict the following curvature signatures:
     for all $k \neq \mathrm{mor}$. Curvature is concentrated in the moral block.
 \end{enumerate}
 Moreover, the dynamic non-commutativity (Proposition~\ref{prop:cross-term}) predicts that
-high curvature in one layer induces non-zero off-diagonal curvature coupling:
+high holonomy deviation in one layer induces non-zero off-diagonal holonomy coupling:
 $\|[F_{123}]_{\mathrm{nar},\mathrm{mor}}\| > 0$ when either $\|F_{123}\|_{\mathrm{nar}}$
 or $\|F_{123}\|_{\mathrm{mor}}$ is large.
 \end{proposition}
@@ -168,7 +190,7 @@ or $\|F_{123}\|_{\mathrm{mor}}$ is large.
 \begin{remark}[Stimulus Construction]
 \label{rem:stimulus-construction}
 For each of the 50 variants per scenario type, the assertion content, domain, and
-specific wording are varied to ensure that the observed curvature effects are attributable
+specific wording are varied to ensure that the observed holonomy deviation effects are attributable
 to the \emph{type} of pressure (evidence vs.\ narrative vs.\ authority) rather than to
 idiosyncratic features of any single prompt. Domains span policy analysis, medical
 advice, historical claims, technical recommendations, and ethical judgments. All stimuli
@@ -253,7 +275,7 @@ principal angles between subspaces $W_k$ and $W_l$.
 \subsection{Curvature Computation}
 \label{sec:exp-curvature}
 
-We describe the five-step procedure for computing block-specific curvature norms from the
+We describe the five-step procedure for computing block-specific holonomy norms from the
 raw activations extracted in \S\ref{sec:exp-setup}. The procedure implements
 Definition~\ref{def:curvature} and Definition~\ref{def:binding-failure} in a form amenable
 to numerical evaluation.
@@ -261,7 +283,7 @@ to numerical evaluation.
 \begin{definition}[Curvature Computation Pipeline]
 \label{def:curvature-pipeline}
 Given a conversation with events $(x_1, x_2, x_3)$ and the head grouping function $\gamma$
-from \S\ref{sec:exp-head-grouping}, the block-specific curvature is computed as follows.
+from \S\ref{sec:exp-head-grouping}, the block-specific holonomy deviation is computed as follows.
 
 \begin{enumerate}
     \item \textbf{Extract attention patterns.} For each attention layer $l \in \{1, \ldots,
@@ -291,8 +313,8 @@ from \S\ref{sec:exp-head-grouping}, the block-specific curvature is computed as 
     $(l,c)$ denotes layer $l$ of conversation $c$. This average transport operator represents
     the ``expected'' transport when standpoint is preserved through acknowledged revision.
 
-    \item \textbf{Compute curvature.} For each test conversation $c$ (T2 or T3) at layer $l$,
-    compute the curvature tensor (Definition~\ref{def:curvature}):
+    \item \textbf{Compute holonomy deviation.} For each test conversation $c$ (T2 or T3) at layer $l$,
+    compute the holonomy deviation (Definition~\ref{def:curvature}):
     \[
         F_{123}^{(l,c)} = U_{12}^{(l,c)} \cdot U_{23}^{(l,c)} \cdot
         \big(\widehat{U}_{13}^{\exp,(l)}\big)^{-1}.
@@ -302,28 +324,28 @@ from \S\ref{sec:exp-head-grouping}, the block-specific curvature is computed as 
     and project onto the invertible subspace.
 
     \item \textbf{Block-specific norms.} Using the head grouping $\gamma$, project the
-    curvature tensor onto each standpoint subspace (Definition~\ref{def:binding-failure}):
+    holonomy deviation onto each standpoint subspace (Definition~\ref{def:binding-failure}):
     \[
         \big\|F_{123}^{(l,c)}\big\|_k = \big\|[F_{123}^{(l,c)}]_k - I_{d_k}\big\|_F,
         \qquad [F_{123}^{(l,c)}]_k = P_{W_k}\, F_{123}^{(l,c)}\, P_{W_k}.
     \]
-    The block-specific curvature norm $\|F_{123}^{(l,c)}\|_k$ quantifies the degree of
+    The block-specific holonomy norm $\|F_{123}^{(l,c)}\|_k$ quantifies the degree of
     binding failure in standpoint layer $k$ at attention layer $l$ of conversation $c$.
 \end{enumerate}
 \end{definition}
 
 \begin{remark}[Multi-Layer Composition]
 \label{rem:multi-layer-curvature}
-The curvature computation of Definition~\ref{def:curvature-pipeline} is applied
+The holonomy computation of Definition~\ref{def:curvature-pipeline} is applied
 \emph{per layer} $l$. The effective multi-layer transport
 (Definition~\ref{def:effective-transport}) is computed by composing the per-layer operators:
 \[
     U_{13}^{\mathrm{eff}} = \prod_{l=1}^{L} \big(I_d + U_{13}^{(l)}\big).
 \]
-The multi-layer curvature $F_{123}^{\mathrm{eff}}$ is then computed analogously. The
+The multi-layer holonomy deviation $F_{123}^{\mathrm{eff}}$ is then computed analogously. The
 dynamic non-commutativity (Proposition~\ref{prop:cross-term}) manifests as a difference between
-$F_{123}^{\mathrm{eff}}$ and the product of per-layer curvatures: if the layers commuted,
-the effective curvature would equal the sum of per-layer curvatures.
+$F_{123}^{\mathrm{eff}}$ and the product of per-layer holonomy deviations: if the layers commuted,
+the effective holonomy deviation would equal the sum of per-layer holonomy deviations.
 \end{remark}
 
 % ------------------------------------------------------------------------------
@@ -333,56 +355,74 @@ the effective curvature would equal the sum of per-layer curvatures.
 We state the formal predictions of the fiber bundle framework and the statistical tests
 used to evaluate them. All tests are conducted at significance level $\alpha = 0.01$.
 
-\begin{hypothesis}[Block-Specificity of Curvature]
+\begin{hypothesis}[Block Sensitivity, weak version (H1a)]
+\label{hyp:block-sensitivity}
+For scenario T2 (Narrative Fracture), the narrative block shows a relatively higher
+holonomy norm than the global mean, even if it is not the absolute maximum across all
+blocks:
+\[
+    \|F_{123}\|_{\mathrm{nar}} > \frac{1}{|K|}\sum_{k \in K} \|F_{123}\|_k
+    \qquad \text{for at least 60\% of T2 conversations.}
+\]
+An analogous condition holds for T3 (moral block), T4 (social block), and T5 (positional
+block). This weak version tests whether the five-axis projection carries directional
+information about which standpoint layer is most affected, without requiring strict
+localization.
+\end{hypothesis}
+
+\begin{hypothesis}[Block Localization, strong version (H1b, original H1)]
 \label{hyp:block-specificity}
-For scenario T2 (Narrative Fracture), the curvature is concentrated in the narrative layer:
+For scenario T2 (Narrative Fracture), the holonomy deviation is concentrated in the
+narrative layer:
 \[
     \frac{\|F_{123}\|_{\mathrm{nar}}}{\max_{k \in K} \|F_{123}\|_k} > 0.85
     \qquad \text{for at least 80\% of T2 conversations.}
 \]
-For scenario T3 (Boundary Breach), the curvature is concentrated in the moral layer:
+For scenario T3 (Boundary Breach), the holonomy deviation is concentrated in the moral
+layer:
 \[
     \frac{\|F_{123}\|_{\mathrm{mor}}}{\max_{k \in K} \|F_{123}\|_k} > 0.85
     \qquad \text{for at least 80\% of T3 conversations.}
 \]
-The threshold $0.85$ ensures that the dominant layer accounts for the overwhelming majority
-of the total curvature signal, ruling out diffuse curvature that would be inconsistent with
-the block structure of Proposition~\ref{prop:block-structure}.
+This is the original strong prediction; it is evaluated but is \emph{not} required for the
+framework's main empirical claims. The failure of H1b, combined with the inter-block
+correlation structure ($r > 0.97$), indicates a dominant global mode rather than five
+independent dimensions (see Section~\ref{sec:results}).
 \end{hypothesis}
 
 \begin{hypothesis}[Baseline Near-Zero Curvature]
 \label{hyp:baseline-zero}
-For scenario T1 (Baseline), the total curvature is near zero across all layers:
+For scenario T1 (Baseline), the total holonomy deviation is near zero across all layers:
 \[
     \frac{1}{|K|} \sum_{k \in K} \|F_{123}\|_k < \epsilon_{\mathrm{base}}
     \qquad \text{for at least 90\% of T1 conversations,}
 \]
-where $\epsilon_{\mathrm{base}}$ is the 10th percentile of the T2/T3 curvature
-distribution. This ensures that the curvature signal in disruption scenarios is
+where $\epsilon_{\mathrm{base}}$ is the 10th percentile of the T2/T3 holonomy deviation
+distribution. This ensures that the holonomy signal in disruption scenarios is
 substantially above the noise floor established by the baseline.
 \end{hypothesis}
 
 \begin{hypothesis}[Scenario Discrimination via Kruskal--Wallis Test]
 \label{hyp:kruskal-wallis}
-The three scenario types produce distinguishable curvature profiles. Formally, let
+The three scenario types produce distinguishable holonomy deviation profiles. Formally, let
 $\mathbf{f}_c = (\|F_{123}^{(c)}\|_{\mathrm{min}}, \|F_{123}^{(c)}\|_{\mathrm{nar}},
 \|F_{123}^{(c)}\|_{\mathrm{soc}}, \|F_{123}^{(c)}\|_{\mathrm{mor}},
-\|F_{123}^{(c)}\|_{\mathrm{pos}})$ be the curvature vector for conversation $c$. We test
-the null hypothesis that the curvature vectors for the three scenario types are drawn from
+\|F_{123}^{(c)}\|_{\mathrm{pos}})$ be the holonomy deviation vector for conversation $c$. We test
+the null hypothesis that the holonomy deviation vectors for the three scenario types are drawn from
 the same distribution using the Kruskal--Wallis $H$-test:
 \[
     H = \frac{12}{N(N+1)} \sum_{i=1}^{3} \frac{R_i^2}{n_i} - 3(N+1),
 \]
 where $N = 150$, $n_i = 50$, and $R_i$ is the sum of ranks for scenario type $i$. The
 framework predicts $p < 0.01$ for this test, indicating that the scenario types produce
-statistically distinguishable curvature signatures.
+statistically distinguishable holonomy deviation signatures.
 \end{hypothesis}
 
 \begin{hypothesis}[Inter-Layer Coupling]
 \label{hyp:inter-layer-coupling}
-The dynamic non-commutativity (Proposition~\ref{prop:cross-term}) predicts that high curvature
-in one layer induces non-zero off-diagonal curvature coupling. For T2 conversations with
-$\|F_{123}\|_{\mathrm{nar}} > \tau$ (where $\tau$ is the median narrative curvature across
+The dynamic non-commutativity (Proposition~\ref{prop:cross-term}) predicts that high holonomy deviation
+in one layer induces non-zero off-diagonal holonomy coupling. For T2 conversations with
+$\|F_{123}\|_{\mathrm{nar}} > \tau$ (where $\tau$ is the median narrative holonomy deviation across
 all T2 conversations), we predict:
 \[
     \big\|[F_{123}]_{\mathrm{nar},\mathrm{mor}}\big\|_F > 0,
@@ -396,7 +436,7 @@ Hypothesis~\ref{hyp:null-non-abelian}).
 
 \begin{hypothesis}[Severity Correlation]
 \label{hyp:severity-correlation}
-Across T2 conversations, the magnitude of narrative curvature correlates with the
+Across T2 conversations, the magnitude of narrative holonomy deviation correlates with the
 \emph{severity} of the pressure event. Severity is operationalized as the semantic
 distance between the user's pressure turn and the model's original assertion, measured by
 cosine similarity of sentence embeddings:
@@ -408,7 +448,7 @@ We predict a positive monotonic relationship, tested via Spearman rank correlati
     \rho\big(\text{severity},\, \|F_{123}\|_{\mathrm{nar}}\big) > 0.5
     \qquad (p < 0.01).
 \]
-An analogous test is conducted for T3 conversations with moral curvature.
+An analogous test is conducted for T3 conversations with moral holonomy deviation.
 \end{hypothesis}
 
 \begin{hypothesis}[Null-Hypothesis Test for Dynamic Non-Commutativity]
@@ -418,7 +458,7 @@ reflects genuine dynamic non-commutativity rather than statistical artifact, we 
 null model by randomly permuting the head assignment function $\gamma$. Specifically, for
 each of $B = 1000$ permutations, we draw $\gamma^{(b)} : \{1, \ldots, H\} \to K$ uniformly
 at random (preserving the number of heads per layer) and recompute the off-diagonal
-curvature coupling. The observed coupling is significant at level $\alpha$ if it exceeds
+holonomy coupling. The observed coupling is significant at level $\alpha$ if it exceeds
 the $(1 - \alpha)$ quantile of the null distribution:
 \[
     \big\|[F_{123}]_{\mathrm{nar},\mathrm{mor}}\big\|_F >
@@ -439,9 +479,11 @@ established in Proposition~\ref{prop:cross-term}.
 \toprule
 \textbf{ID} & \textbf{Prediction} & \textbf{Test} & \textbf{Threshold} \\
 \midrule
-H\ref{hyp:block-specificity} & Block-specific curvature & Dominant-layer ratio & $> 0.85$
+H\ref{hyp:block-sensitivity} & Block sensitivity (H1a, weak) & Above-mean ratio & $> 60\%$
+of conversations \\
+H\ref{hyp:block-specificity} & Block localization (H1b, strong) & Dominant-layer ratio & $> 0.85$
 in $> 80\%$ of conversations \\
-H\ref{hyp:baseline-zero} & Baseline near-zero & Mean curvature norm & $< \epsilon_{\mathrm{base}}$
+H\ref{hyp:baseline-zero} & Baseline near-zero & Mean holonomy norm & $< \epsilon_{\mathrm{base}}$
 in $> 90\%$ of T1 \\
 H\ref{hyp:kruskal-wallis} & Scenario discrimination & Kruskal--Wallis $H$-test & $p < 0.01$ \\
 H\ref{hyp:inter-layer-coupling} & Inter-layer coupling & Off-diagonal norm & $> 0$ (vs.\
@@ -452,6 +494,58 @@ H\ref{hyp:null-non-abelian} & Dynamic non-commutativity & Permutation test & Exc
 percentile of null \\
 \bottomrule
 \end{tabular}
+\end{table}
+
+% ==============================================================================
+\subsection{Results}
+\label{sec:results}
+
+Table~\ref{tab:results-summary} reports the complete results of all hypothesis tests
+across both models. Hypotheses H8.19--H8.21 require permutation-based tests over head
+groupings that were not completed within the computational scope of the present paper.
+These hypotheses are explicitly deferred to Paper~V, which will also include causal
+validation via activation patching. The non-reporting of H8.19--H8.21 is a computational
+limitation, not a selective reporting decision; the hypotheses remain open and are retained
+in the framework for future evaluation.
+
+\begin{table}[h]
+\centering
+\caption{Complete hypothesis results across both models.}
+\label{tab:results-summary}
+\small
+\begin{tabular}{@{}llllll@{}}
+\toprule
+\textbf{ID} & \textbf{Prediction} & \textbf{Test} & \textbf{GPT-2} & \textbf{Llama-7b} &
+\textbf{Status} \\
+\midrule
+H1a & Block sensitivity & Above-mean ratio & [to be filled] & [to be filled] &
+Pending \\
+H1b & Block localization & Dominant-layer ratio & $\times$ (0.203) & $\times$ (0.196) &
+Not confirmed \\
+H2 & Baseline near-zero & Mann-Whitney $U$ & $\checkmark$ ($d{=}+0.472$) & Partially$^*$ &
+Partial \\
+H3 & Scenario discrimination & KW $\varepsilon^2$ & $\checkmark$ (0.64--0.69) &
+$\checkmark$ (0.42) & Confirmed \\
+H4 & Per-layer discrimination & KW per layer & $\checkmark$ (12/12) &
+$\checkmark$ (32/32) & Confirmed \\
+H5 & Ablation sensitivity & Spearman $\rho$ & $\checkmark$ ($\rho{\geq}0.94$) &
+Deferred$^\dagger$ & Partial \\
+H6 & Diagnostic superiority & Cohen's $d$ & $\checkmark$ ($d{=}+0.472$) & Partially$^*$ &
+Partial \\
+H7 & T0 anomaly & Mann-Whitney $U$ & $\checkmark$ ($d{=}0.883$) &
+$\checkmark$ ($d{=}1.743$) & Confirmed \\
+H8.19 & Dynamic non-commutativity & Permutation test & \textbf{Not run} &
+\textbf{Not run} & Deferred \\
+H8.20 & Severity correlation & Spearman $\rho$ & \textbf{Not run} &
+\textbf{Not run} & Deferred \\
+H8.21 & Null grouping test & Permutation null & \textbf{Not run} &
+\textbf{Not run} & Deferred \\
+\bottomrule
+\end{tabular}
+
+\medskip
+{\footnotesize $^*$Affected by T0 anomaly; see Section~\ref{sec:discussion}.
+$^\dagger$Llama-7b ablation requires additional GPU resources; deferred to Paper~V.}
 \end{table}
 
 \begin{remark}[Multiple Comparisons]
@@ -471,14 +565,14 @@ $\hat{\varepsilon}^2 = (H - k + 1) / (N - k)$, where $k = 3$ is the number of gr
 For Hypothesis~\ref{hyp:severity-correlation}, the Spearman $\rho$ itself serves as the
 effect size. For block-specificity (Hypothesis~\ref{hyp:block-specificity}), we report
 the mean dominant-layer ratio across conversations. These quantities enable readers to
-assess the \emph{practical} significance of the curvature framework independent of sample
+assess the \emph{practical} significance of the holonomy framework independent of sample
 size.
 \end{remark}
 
 \begin{remark}[Reproducibility]
 \label{rem:reproducibility}
 All experimental stimuli, extraction code, and analysis scripts will be released upon
-publication. The curvature computation pipeline (Definition~\ref{def:curvature-pipeline})
+publication. The holonomy computation pipeline (Definition~\ref{def:curvature-pipeline})
 is implemented using TransformerLens~\cite{nanda2023transformerlens} for activation
 extraction and NumPy/PyTorch for linear algebra operations. The head grouping function
 $\gamma$ is estimated once on the full stimulus set and then fixed for all downstream

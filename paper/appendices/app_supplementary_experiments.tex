@@ -1,0 +1,155 @@
+% ==============================================================================
+% Appendix C: Supplementary Experiments
+% "Holonomy Geometry of Cognitive States"
+% ==============================================================================
+
+\section{Supplementary Experiments}
+\label{app:supplementary}
+
+This appendix reports four supplementary experiments that verify the robustness
+and interpretive structure of the main results. All experiments use the existing
+180 test conversations (30 per scenario type) for Llama-2-7b unless otherwise noted.
+
+% ------------------------------------------------------------------------------
+\subsection{PCA Decomposition of Block Holonomy}
+\label{app:pca}
+
+To quantify the ``one dominant mode'' hypothesis (Section~\ref{sec:reframing}), we
+perform principal component analysis on the $180 \times 5$ block holonomy matrix,
+where each row is a conversation and each column is one of the five block-specific
+holonomy norms $(\|F\|_{\min}, \|F\|_{\mathrm{nar}}, \|F\|_{\mathrm{soc}},
+\|F\|_{\mathrm{mor}}, \|F\|_{\mathrm{pos}})$, averaged across all 32 model layers.
+Columns are z-score normalized before PCA.
+
+\paragraph{Results.}
+The first principal component accounts for $99.99\%$ of total variance. The PC1
+loadings are approximately uniform across all five standpoint blocks:
+\begin{equation}
+    \ell_{\min} = \ell_{\mathrm{nar}} = \ell_{\mathrm{soc}} = \ell_{\mathrm{mor}} =
+    \ell_{\mathrm{pos}} \approx -0.447 \approx -\frac{1}{\sqrt{5}}.
+\end{equation}
+This confirms that PC1 captures a global coherence signal rather than any single
+standpoint dimension. PC1 alone achieves $\varepsilon^2 = 0.42$ for scenario
+discrimination (Kruskal--Wallallis, $p < 10^{-14}$), matching the full
+five-dimensional result ($\varepsilon^2 = 0.42$--$0.68$).
+
+Residual components PC2--PC5 collectively account for $< 0.01\%$ of variance.
+Their apparent scenario discrimination after controlling for PC1 is a numerical
+artifact of near-zero variance in the residual subspace; these components carry
+no meaningful additional diagnostic information.
+
+\paragraph{Interpretation.}
+The five block-specific holonomy norms are linear projections of a single global
+signal. The five-axis decomposition provides interpretable vocabulary (which
+standpoint block receives the highest absolute load), but the primary empirical
+signal is one-dimensional. This is consistent with the superposition hypothesis
+in mechanistic interpretability~\cite{elhage2022superposition}: transformer
+representations encode many features in high-dimensional superposition rather
+than in cleanly separated subspaces.
+
+% ------------------------------------------------------------------------------
+\subsection{Baseline Ensemble Analysis}
+\label{app:baseline-ensemble}
+
+The holonomy deviation $F_{ijk}$ is defined relative to an expected transport
+$U_{ik}^{\exp}$ estimated from T1 baseline conversations. This makes the measure
+reference-relative rather than intrinsic. To verify that the main conclusions are
+robust to baseline selection, we perform a bootstrap ensemble analysis.
+
+\paragraph{Method.}
+We randomly resample the 30 T1 conversations into five subsets of 6 conversations
+each (with replacement within each subset, 20 bootstrap iterations per subset).
+For each resampled baseline, we recompute the scenario discrimination (H3) and
+T0 anomaly (H7) statistics.
+
+\paragraph{Results.}
+Across all five baseline subsets and 100 total bootstrap iterations:
+\begin{itemize}
+    \item H3~$\varepsilon^2$ ranges from $0.46$ to $0.51$ (all above the $0.30$
+    robustness threshold).
+    \item H7 Cohen's~$d$ ranges from $1.48$ to $3.35$ (all indicating large effect).
+    \item T0 ranks first (highest holonomy) in all subsamples.
+\end{itemize}
+
+\paragraph{Conclusion.}
+The scenario discrimination (H3) and T0 anomaly (H7) results are robust to
+baseline selection. The T0 anomaly is not an artifact of a particular T1 baseline
+choice.
+
+% ------------------------------------------------------------------------------
+\subsection{Null Grouping Controls}
+\label{app:null-grouping}
+
+The head grouping function $\gamma : H \to K$ assigns attention heads to
+standpoint layers based on attention differential analysis. To verify that this
+learned grouping provides non-trivial diagnostic decomposition, we compare it
+against three null groupings.
+
+\paragraph{Null grouping types.}
+\begin{enumerate}
+    \item \textbf{Random:} Heads randomly assigned to 5 layers, preserving the
+    layer size distribution of the learned $\gamma$ (20 random instances).
+    \item \textbf{Shuffled:} Random permutation of the learned $\gamma$ assignments
+    (20 instances).
+    \item \textbf{Layer-uniform:} Heads assigned by physical transformer layer
+    position (first $1/5$ of layers $\to \psi_{\min}$, last $1/5 \to \psi_{\pos}$,
+    etc.).
+\end{enumerate}
+
+\paragraph{Method.}
+For each null grouping, we recompute holonomy deviation for all 180 conversations
+and compute the H3~$\varepsilon^2$ scenario discrimination effect size. We then
+compare the learned $\gamma$'s $\varepsilon^2$ against the null distribution using
+a one-sided permutation test.
+
+\paragraph{Status.}
+This experiment requires raw activations (activations.npz) and is deferred pending
+extraction. The experiment code is available in
+\texttt{experiments/experiment\_b\_null\_grouping.py}. Results will be reported in
+a subsequent revision.
+
+% ------------------------------------------------------------------------------
+\subsection{Competitive Baselines}
+\label{app:competitive}
+
+To verify that holonomy deviation provides unique diagnostic value beyond trivial
+attention-based statistics, we compare it against three alternative measures:
+
+\begin{enumerate}
+    \item \textbf{Layer-wise attention distance:} Mean Frobenius distance between
+    adjacent layer attention matrices:
+    $d_{\mathrm{attn}} = \frac{1}{L-1}\sum_{l=1}^{L-1} \|A^{(l+1)} - A^{(l)}\|_F$.
+    \item \textbf{Mean attention entropy:} Mean Shannon entropy of attention
+    distributions across all heads and layers.
+    \item \textbf{Residual stream norm change:} $\|\mathbf{h}_{x_3} -
+    \mathbf{h}_{x_1}\|_2$.
+\end{enumerate}
+
+For each measure, we compute the Kruskal--Wallallis $\varepsilon^2$ for scenario
+discrimination and compare against the holonomy deviation result
+($\varepsilon^2 = 0.42$--$0.68$).
+
+\paragraph{Status.}
+This experiment requires raw activations and is deferred pending extraction. The
+experiment code is available in
+\texttt{experiments/experiment\_d\_competitive\_baselines.py}. Results will be
+reported in a subsequent revision.
+
+% ------------------------------------------------------------------------------
+\subsection{Value Matrix Orthonormality}
+\label{app:orthonormality}
+
+The derivation of $V_h V_h^T = P_{\mathrm{range}(V_h)}$ (orthogonal projection)
+requires $V_h^T V_h = \mathrm{Id}_{d_v}$, i.e., the columns of the value matrix
+$V_h$ are orthonormal. This is not enforced by transformer training. We assess
+this assumption empirically by computing, for each head~$h$, the deviation
+\begin{equation}
+    \epsilon_h = \|V_h^T V_h - \mathrm{Id}_{d_v}\|_F.
+\end{equation}
+
+\paragraph{Status.}
+This measurement is computationally inexpensive and can be completed on CPU.
+Results for GPT-2 (144 heads) and Llama-2-7b (1024 heads) will be reported in
+a subsequent revision. The measurement code is available in
+\texttt{experiments/experiment\_a\_baseline\_ensemble.py} (value matrix
+orthonormality module).

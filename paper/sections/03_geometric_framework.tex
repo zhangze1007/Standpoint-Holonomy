@@ -95,7 +95,7 @@ $g_F(g \cdot h, g \cdot h') = g_F(h, h')$ for all $h, h' \in E_x$ and $g \in G$.
 \end{definition}
 
 % ------------------------------------------------------------------------------
-\subsection{Connection and Curvature}
+\subsection{Connection and Holonomy Deviation}
 \label{sec:connection-abstract}
 
 \begin{definition}[Connection]
@@ -109,34 +109,52 @@ A \textbf{gauge transformation} replaces $U_{ij}$ by $g_j\, U_{ij}\, g_i^{-1}$ f
 $g_i, g_j \in G$.
 \end{definition}
 
-\begin{definition}[Curvature]
+\begin{definition}[Holonomy Deviation]
 \label{def:curvature-abstract}
-For each 2-simplex $\sigma = \langle x_i, x_j, x_k \rangle \in T$, the \textbf{curvature}
-is
+For each 2-simplex $\sigma = \langle x_i, x_j, x_k \rangle \in T$, the \textbf{holonomy
+deviation} is
 \[
     F_{ijk} = U_{ij} \cdot U_{jk} \cdot (U_{ik}^{\exp})^{-1} \in \operatorname{GL}(d,
     \mathbb{R}),
 \]
 where $U_{ik}^{\exp}$ is the \textbf{expected transport} from $x_i$ to $x_k$ (the
-baseline transport estimated from standpoint-preserving conversations). The curvature
-measures the path-dependence of transport: whether the composite path through $x_j$ yields
-the same result as the expected direct path.
+baseline transport estimated from standpoint-preserving conversations). The holonomy
+deviation measures the path-dependence of transport: whether the composite path through
+$x_j$ yields the same result as the expected direct path.
 
-The \textbf{block-specific curvature} for layer $k$ is
+The \textbf{block-specific holonomy norm} for layer $k$ is
 \[
     [F_{ijk}]_k = \Pi_k\, F_{ijk}\, \Pi_k, \qquad
     \|F_{ijk}\|_k = \|[F_{ijk}]_k - \Pi_k\|_F.
 \]
 \end{definition}
 
+\begin{remark}[Discrete Holonomy vs.\ Differential Curvature]
+\label{rem:holonomy-vs-curvature}
+The quantity $F_{ijk}$ defined above is a finite holonomy element over the discrete
+triangle $\langle x_i, x_j, x_k \rangle \in \mathcal{T}$. It measures the failure of
+path-independent transport around a completed discrete loop: transporting from $x_i$
+through $x_j$ to $x_k$ via the attention mechanism, and comparing against the expected
+direct transport $U^{\exp}_{ik}$. This differs from the differential curvature 2-form
+$\mathcal{F} = dA + A \wedge A$ of classical gauge theory, which is a local infinitesimal
+quantity defined on the tangent bundle of a smooth manifold. The present framework is a
+discrete analogue: the event space $\mathcal{X} = (V, E, \mathcal{T})$ is a simplicial
+complex, not a smooth manifold, and the transport operators are finite linear maps, not
+differential forms. We use ``holonomy deviation'' throughout to denote $F_{ijk}$ and its
+block-specific norms $\|F_{ijk}\|_k$, following the convention in discrete differential
+geometry~\cite{crane2013discrete}. The term ``curvature'' appears in informal usage to
+denote the magnitude of holonomy deviation as a scalar diagnostic; all formal definitions
+use the precise holonomy terminology.
+\end{remark}
+
 % ------------------------------------------------------------------------------
 \subsection{Gauge Invariance}
 \label{sec:gauge-abstract}
 
-\begin{proposition}[Gauge Invariance of Block-Specific Curvature]
+\begin{proposition}[Gauge Invariance of Block-Specific Holonomy Norms]
 \label{prop:gauge-abstract}
 Under the gauge transformation $U_{ij} \mapsto g_j\, U_{ij}\, g_i^{-1}$ with $g_i, g_j
-\in G$, the block-specific curvature norms are invariant:
+\in G$, the block-specific holonomy norms are invariant:
 \[
     \big\|[F^g_{ijk}]_k - \Pi_k\big\|_F = \big\|[F_{ijk}]_k - \Pi_k\big\|_F
     \qquad \forall\, k \in K.
@@ -165,10 +183,10 @@ Since $g_k \in O(d_k)$ and the Frobenius norm is invariant under orthogonal conj
 \end{proof}
 
 % ------------------------------------------------------------------------------
-\subsection{Curvature Decomposition}
+\subsection{Holonomy Deviation Decomposition}
 \label{sec:decomposition}
 
-\begin{lemma}[Block Decomposition of Total Curvature]
+\begin{lemma}[Block Decomposition of Total Holonomy Deviation]
 \label{lem:decomposition}
 When each transport operator $U_{ij}$ is block-diagonal (i.e., $U_{ij} = \bigoplus_k
 U_{ij}^{(k)}$ with $U_{ij}^{(k)} : W_k \to W_k$), the curvature $F_{ijk}$ is also
