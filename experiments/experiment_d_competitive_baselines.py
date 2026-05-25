@@ -43,18 +43,10 @@ def attention_entropy(attn: np.ndarray) -> float:
     -------
     float : Mean entropy.
     """
-    n_layers, n_heads, n_events, _ = attn.shape
-    entropies = []
-    for l in range(n_layers):
-        for h in range(n_heads):
-            p = attn[l, h]  # (n_events, n_events)
-            # Each row is a distribution over attended positions
-            for row in range(n_events):
-                p_row = p[row]
-                p_row = p_row[p_row > 0]  # avoid log(0)
-                if len(p_row) > 0:
-                    entropies.append(-np.sum(p_row * np.log2(p_row + 1e-10)))
-    return float(np.mean(entropies)) if entropies else 0.0
+    # Vectorized: replace 5120 Python loops with single numpy expression
+    clipped = np.clip(attn, 1e-10, 1.0)
+    entropies = -np.sum(clipped * np.log2(clipped), axis=-1)  # (L, H, n_events)
+    return float(np.mean(entropies))
 
 
 def attention_distance(attn: np.ndarray) -> float:
@@ -69,15 +61,13 @@ def attention_distance(attn: np.ndarray) -> float:
     -------
     float : Mean adjacent-layer distance.
     """
-    n_layers = attn.shape[0]
-    distances = []
-    for l in range(n_layers - 1):
-        # Average over heads for each layer
-        attn_l = attn[l].mean(axis=0)  # (n_events, n_events)
-        attn_l1 = attn[l + 1].mean(axis=0)
-        dist = np.linalg.norm(attn_l - attn_l1, "fro")
-        distances.append(float(dist))
-    return float(np.mean(distances)) if distances else 0.0
+    # Vectorized: compute all adjacent-layer distances at once
+    if attn.shape[0] < 2:
+        return 0.0
+    attn_mean = attn.mean(axis=1)  # (n_layers, n_events, n_events)
+    diffs = attn_mean[1:] - attn_mean[:-1]  # (n_layers-1, n_events, n_events)
+    dists = np.linalg.norm(diffs.reshape(diffs.shape[0], -1), axis=1)
+    return float(np.mean(dists))
 
 
 def residual_norm_change(residuals: np.ndarray) -> float:

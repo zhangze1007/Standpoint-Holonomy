@@ -164,8 +164,11 @@ def _batched_transport(
     raw = attn_layer.reshape(attn_layer.shape[0], attn_layer.shape[1], -1)[:, :, flat_idx]  # (B, n_heads)
 
     n_standpoint = P_stack_t.shape[0]
+    B = raw.shape[0]
     alpha = torch.stack(
-        [raw[:, gamma_t == k].mean(dim=1) for k in range(n_standpoint)],
+        [raw[:, gamma_t == k].mean(dim=1) if (gamma_t == k).any()
+         else torch.zeros(B, device=raw.device, dtype=raw.dtype)
+         for k in range(n_standpoint)],
         dim=1,
     )
     # U = sum_k alpha_k * P_k  via einsum
@@ -194,9 +197,11 @@ def _batched_curvature(
     F = torch.bmm(torch.bmm(U_12, U_23), U_exp_inv)  # (B, d_model, d_model)
     deviation = F - torch.eye(F.shape[1], device=device, dtype=torch.float32)
 
+    # Pre-convert proj_bases to GPU tensors once
+    proj_bases_t = [torch.as_tensor(Q_k, device=device, dtype=torch.float32) for Q_k in proj_bases]
+
     block_norms = []
-    for Q_k in proj_bases:
-        Q_t = torch.as_tensor(Q_k, device=device, dtype=torch.float32)
+    for Q_t in proj_bases_t:
         # deviation @ Q_k -> (B, d_model, rank_k)
         # Q_k^T @ (deviation @ Q_k) -> (B, rank_k, rank_k)
         proj_dev = torch.bmm(
@@ -204,7 +209,7 @@ def _batched_curvature(
             torch.bmm(deviation, Q_t.unsqueeze(0).expand(deviation.shape[0], -1, -1)),
         )
         # Frobenius norm per batch element
-        norms = torch.norm(proj_dev.reshape(proj_dev.shape[0], -1), dim=1)
+        norms = torch.linalg.vector_norm(proj_dev.reshape(proj_dev.shape[0], -1), dim=1)
         block_norms.append(norms.cpu().numpy())
 
     return F, block_norms

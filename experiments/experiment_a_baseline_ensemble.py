@@ -217,12 +217,14 @@ def bootstrap_baseline_ensemble(
 def run_with_activations(model_name: str, results_dir: Path) -> dict:
     """Run full baseline ensemble using raw activations.
 
-    This is the proper implementation that recomputes U_exp from scratch.
+    Uses GPU-batched transport/curvature (same path as the main pipeline).
     Requires activations.npz and grouping.npz.
     """
+    import torch
     from experiments.curvature.compute import (
-        compute_transport_operator,
-        compute_curvature,
+        _build_P_stack,
+        _batched_transport,
+        _batched_curvature,
         compute_projection_bases,
     )
 
@@ -235,90 +237,97 @@ def run_with_activations(model_name: str, results_dir: Path) -> dict:
             f"Run extraction first: python -m experiments.extraction.extract {model_name}"
         )
 
+    from experiments.curvature.compute import EPSILON_INV
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     raw = np.load(activations_path, allow_pickle=False)
     grouping = np.load(gamma_path, allow_pickle=False)
     gamma = grouping["gamma"]
 
-    # Reorganize T1 activations
-    t1_activations = {}
+    # Get all test conversation IDs
+    all_conv_ids = set()
+    t1_ids = []
     for key in raw.files:
         parts = key.rsplit("/", 1)
-        if len(parts) < 2:
-            continue
-        conv_id, field = parts
-        if not conv_id.startswith("T1/test/"):
-            continue
-        if conv_id not in t1_activations:
-            t1_activations[conv_id] = {}
-        t1_activations[conv_id][field] = raw[key]
-
-    t1_ids = sorted(t1_activations.keys())
+        if len(parts) >= 2 and "/test/" in parts[0]:
+            conv_id = parts[0]
+            all_conv_ids.add(conv_id)
+            if conv_id.startswith("T1/"):
+                t1_ids.append(conv_id)
+    all_conv_ids = sorted(all_conv_ids)
+    t1_ids = sorted(set(t1_ids))
     n_t1 = len(t1_ids)
-    print(f"  T1 conversations: {n_t1}")
+    print(f"  T1 conversations: {n_t1}, total: {len(all_conv_ids)}")
 
-    # Split into 5 non-overlapping subsets
+    # Split T1 into 5 non-overlapping subsets
     rng = np.random.default_rng(42)
     perm = rng.permutation(n_t1)
     subset_size = n_t1 // 5
-    subsets = [t1_ids[perm[i*subset_size:(i+1)*subset_size]] for i in range(5)]
+    subsets = [t1_ids[perm[i*subset_size:(i+1)*subset_size].tolist()] for i in range(5)]
 
     # Load value matrices
     if "value_matrices" in raw.files:
         V = raw["value_matrices"]
     else:
-        sample_key = list(t1_activations.keys())[0]
-        V = t1_activations[sample_key]["value_matrices"]
+        for key in raw.files:
+            if "value_matrices" in key:
+                V = raw[key]
+                break
 
-    # Get all conversation IDs (all scenarios)
-    all_conv_ids = set()
-    for key in raw.files:
-        parts = key.rsplit("/", 1)
-        if len(parts) >= 2 and "/test/" in parts[0]:
-            all_conv_ids.add(parts[0])
-    all_conv_ids = sorted(all_conv_ids)
-
-    # Load all activations
-    all_activations = {}
+    # Pre-load all attention tensors on GPU
+    attn_gpu = {}
     for conv_id in all_conv_ids:
-        fields = {}
-        for field in ("attention", "residuals", "value_matrices"):
-            full_key = f"{conv_id}/{field}"
-            if full_key in raw.files:
-                fields[field] = raw[full_key]
-        all_activations[conv_id] = fields
+        key = f"{conv_id}/attention"
+        if key in raw.files:
+            attn_np = raw[key].astype(np.float32)
+            attn_gpu[conv_id] = torch.as_tensor(attn_np, device=device, dtype=torch.float32)
 
-    # For each subset, compute U_exp and recompute holonomy for all conversations
-    layer = 0  # Use first layer for simplicity
+    gamma_t = torch.as_tensor(gamma, device=device, dtype=torch.long)
+    V_t = torch.as_tensor(V.astype(np.float32), device=device, dtype=torch.float32)
+    layer = 0
+
+    # Pre-compute P_stack and proj_bases (same gamma for all subsets)
+    P_stack_t = _build_P_stack(V_t, gamma_t, layer, device)
+    proj_bases = compute_projection_bases(V, gamma, layer)
+
     results_per_subset = []
 
     for m, subset in enumerate(subsets):
         print(f"\n  Subset {m+1}/5: {len(subset)} T1 conversations")
 
-        # Compute U_exp from this subset
-        products = []
+        # Compute U_exp from this subset using GPU batched transport
+        t1_products = []
         for conv_id in subset:
-            attn = all_activations[conv_id]["attention"]
-            U_12 = compute_transport_operator(attn, V, gamma, 0, 1, layer)
-            U_23 = compute_transport_operator(attn, V, gamma, 1, 2, layer)
-            products.append(U_12 @ U_23)
-        U_exp = np.mean(products, axis=0)
+            attn = attn_gpu[conv_id].unsqueeze(0)
+            u12 = _batched_transport(attn, P_stack_t, gamma_t, 0, 1, layer)
+            u23 = _batched_transport(attn, P_stack_t, gamma_t, 1, 2, layer)
+            t1_products.append(torch.bmm(u12, u23).squeeze(0))
+        U_exp = torch.stack(t1_products, dim=0).mean(dim=0)
+        U_exp_inv = torch.linalg.inv(U_exp + EPSILON_INV * torch.eye(
+            U_exp.shape[0], device=device, dtype=torch.float32
+        ))
 
-        # Compute projection bases
-        proj_bases = compute_projection_bases(V, gamma, layer)
+        # Batch compute holonomy for ALL conversations
+        attn_batch = torch.stack([attn_gpu[c] for c in all_conv_ids], dim=0)
+        U_12 = _batched_transport(attn_batch, P_stack_t, gamma_t, 0, 1, layer)
+        U_23 = _batched_transport(attn_batch, P_stack_t, gamma_t, 1, 2, layer)
+        U_exp_inv_batch = U_exp_inv.unsqueeze(0).expand(len(all_conv_ids), -1, -1)
+        F_batch, block_norms_list = _batched_curvature(U_12, U_23, U_exp_inv_batch, proj_bases, device)
 
-        # Recompute holonomy for ALL conversations
+        # Build DataFrame
+        total_norms = np.zeros(len(all_conv_ids))
+        for bn in block_norms_list:
+            total_norms += bn ** 2
+        total_norms = np.sqrt(total_norms)
+
         rows = []
-        for conv_id in all_conv_ids:
-            attn = all_activations[conv_id]["attention"]
-            U_12 = compute_transport_operator(attn, V, gamma, 0, 1, layer)
-            U_23 = compute_transport_operator(attn, V, gamma, 1, 2, layer)
-            F, block_norms = compute_curvature(U_12, U_23, U_exp, proj_bases)
-
+        for idx, conv_id in enumerate(all_conv_ids):
             scenario = conv_id.split("/")[0]
             row = {"conversation_id": conv_id, "scenario": scenario, "layer": layer}
-            for name, val in block_norms.items():
-                row[f"curvature_{name}"] = val
-            row["curvature_total"] = float(np.sqrt(sum(v**2 for v in block_norms.values())))
+            for k, name in enumerate(LAYER_NAMES):
+                row[f"curvature_{name}"] = float(block_norms_list[k][idx])
+            row["curvature_total"] = float(total_norms[idx])
             rows.append(row)
 
         df_subset = pd.DataFrame(rows)
@@ -338,6 +347,13 @@ def run_with_activations(model_name: str, results_dir: Path) -> dict:
         }
         results_per_subset.append(subset_result)
         print(f"    H3 ε² = {h3_eps:.4f}, H7 d = {h7.get('cohens_d', 0):.4f}, T0 rank = {h7.get('t0_rank', -1)}")
+
+        del U_exp, U_exp_inv, U_exp_inv_batch, attn_batch, U_12, U_23, F_batch
+
+    # Cleanup GPU
+    del attn_gpu, gamma_t, V_t, P_stack_t
+    if device.type == "cuda":
+        torch.cuda.empty_cache()
 
     # Aggregate
     all_h3 = [s["h3_epsilon_sq"] for s in results_per_subset]

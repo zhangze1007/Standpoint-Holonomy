@@ -203,6 +203,23 @@ def extract_attention_for_conversation(
             )
 
         # -- VECTORIZED attention extraction --------------------------------
+        # Build event indicator matrices once (shared across layers)
+        seq_len = tokens.shape[1]
+        eq = torch.zeros(seq_len, n_events, dtype=torch.float32, device=embed_device)
+        ek = torch.zeros(seq_len, n_events, dtype=torch.float32, device=embed_device)
+        event_sizes = torch.zeros(n_events, dtype=torch.float32, device=embed_device)
+        for i in range(n_events):
+            s, e = event_token_ranges[i]
+            size = e - s
+            if size > 0:
+                eq[s:e, i] = 1.0
+                ek[s:e, i] = 1.0
+                event_sizes[i] = float(size)
+
+        # Sizes for normalization: (n_events_q, n_events_k)
+        # Clamp to 1 to avoid 0/0 NaN for empty events (block_sums is also 0 there)
+        size_mat = (event_sizes[:, None] * event_sizes[None, :]).clamp(min=1.0)
+
         if outputs.attentions is not None:
             for layer_idx, attn_weights in enumerate(outputs.attentions):
                 if layer_idx >= n_layers:
@@ -210,18 +227,13 @@ def extract_attention_for_conversation(
                 # attn_weights shape: (batch=1, n_heads, seq_q, seq_k)
                 pat = attn_weights[0]  # (n_heads, seq_q, seq_k)
 
-                # Build block means using advanced indexing
-                # For each (i,j) event pair, compute mean over q∈[q_s,q_e), k∈[k_s,k_e)
-                for i in range(n_events):
-                    q_s, q_e = event_token_ranges[i]
-                    for j in range(n_events):
-                        k_s, k_e = event_token_ranges[j]
-                        block = pat[:, q_s:q_e, k_s:k_e]
-                        if block.numel() > 0:
-                            attention[layer_idx, :, i, j] = block.mean(dim=(1, 2)).cpu().float().numpy()
+                # Vectorized block mean: einsum over all event pairs at once
+                block_sums = torch.einsum('hqk,qi,kj->hij', pat, eq, ek)
+                attention[layer_idx] = (block_sums / size_mat).cpu().float().numpy()
 
                 del attn_weights
             del outputs.attentions
+        del eq, ek, event_sizes, size_mat
 
     finally:
         for handle in hook_handles:
