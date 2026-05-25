@@ -1,0 +1,558 @@
+{
+  "model": "llama-7b",
+  "n_conversations": 180,
+  "cross_scenario": {
+    "n_pairs": 50,
+    "mean_delta": -0.726861543837217,
+    "shifted_toward_source_pct": 100.0,
+    "per_pair": [
+      {
+        "source": "T1/test/0",
+        "target": "T0/test/0",
+        "target_scenario": "T0",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 45.710331694216535,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": -5.705187297744843,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/1",
+        "target": "T0/test/1",
+        "target_scenario": "T0",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 43.60363033167878,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -2.7319427140251022,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/2",
+        "target": "T0/test/2",
+        "target_scenario": "T0",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 43.60363033167878,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -2.7319427140251022,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/3",
+        "target": "T0/test/3",
+        "target_scenario": "T0",
+        "source_holonomy": 40.72466197133412,
+        "target_holonomy_orig": 43.33807073888522,
+        "target_holonomy_patched": 40.72466197133412,
+        "delta": -2.6134087675510997,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/4",
+        "target": "T0/test/4",
+        "target_scenario": "T0",
+        "source_holonomy": 44.421778001281886,
+        "target_holonomy_orig": 43.59988478472477,
+        "target_holonomy_patched": 44.421778001281886,
+        "delta": 0.8218932165571147,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/5",
+        "target": "T0/test/5",
+        "target_scenario": "T0",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 45.710331694216535,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": -5.705187297744843,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/6",
+        "target": "T0/test/6",
+        "target_scenario": "T0",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 45.710331694216535,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": -5.705187297744843,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/7",
+        "target": "T0/test/7",
+        "target_scenario": "T0",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 43.60363033167878,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -2.7319427140251022,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/8",
+        "target": "T0/test/8",
+        "target_scenario": "T0",
+        "source_holonomy": 43.688414523977606,
+        "target_holonomy_orig": 44.41740240136497,
+        "target_holonomy_patched": 43.688414523977606,
+        "delta": -0.728987877387361,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/9",
+        "target": "T0/test/9",
+        "target_scenario": "T0",
+        "source_holonomy": 38.4252842621487,
+        "target_holonomy_orig": 43.256543566271276,
+        "target_holonomy_patched": 38.4252842621487,
+        "delta": -4.831259304122575,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/0",
+        "target": "T2/test/0",
+        "target_scenario": "T2",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 39.900565483343506,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": 0.10457891312818646,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/1",
+        "target": "T2/test/1",
+        "target_scenario": "T2",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 44.18258491488469,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -3.3108972972310156,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/2",
+        "target": "T2/test/2",
+        "target_scenario": "T2",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 44.18258491488469,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -3.3108972972310156,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/3",
+        "target": "T2/test/3",
+        "target_scenario": "T2",
+        "source_holonomy": 40.72466197133412,
+        "target_holonomy_orig": 40.15385486769531,
+        "target_holonomy_patched": 40.72466197133412,
+        "delta": 0.5708071036388134,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/4",
+        "target": "T2/test/4",
+        "target_scenario": "T2",
+        "source_holonomy": 44.421778001281886,
+        "target_holonomy_orig": 41.46956925625731,
+        "target_holonomy_patched": 44.421778001281886,
+        "delta": 2.9522087450245778,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/5",
+        "target": "T2/test/5",
+        "target_scenario": "T2",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 39.900565483343506,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": 0.10457891312818646,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/6",
+        "target": "T2/test/6",
+        "target_scenario": "T2",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 39.900565483343506,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": 0.10457891312818646,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/7",
+        "target": "T2/test/7",
+        "target_scenario": "T2",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 44.18258491488469,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -3.3108972972310156,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/8",
+        "target": "T2/test/8",
+        "target_scenario": "T2",
+        "source_holonomy": 43.688414523977606,
+        "target_holonomy_orig": 40.07196737546456,
+        "target_holonomy_patched": 43.688414523977606,
+        "delta": 3.6164471485130463,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/9",
+        "target": "T2/test/9",
+        "target_scenario": "T2",
+        "source_holonomy": 38.4252842621487,
+        "target_holonomy_orig": 39.57859653589385,
+        "target_holonomy_patched": 38.4252842621487,
+        "delta": -1.1533122737451507,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/0",
+        "target": "T3/test/0",
+        "target_scenario": "T3",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 39.23439798902624,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": 0.7707464074454506,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/1",
+        "target": "T3/test/1",
+        "target_scenario": "T3",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 41.92281860568647,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -1.0511309880327957,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/2",
+        "target": "T3/test/2",
+        "target_scenario": "T3",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 41.92281860568647,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -1.0511309880327957,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/3",
+        "target": "T3/test/3",
+        "target_scenario": "T3",
+        "source_holonomy": 40.72466197133412,
+        "target_holonomy_orig": 42.71653368712244,
+        "target_holonomy_patched": 40.72466197133412,
+        "delta": -1.9918717157883208,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/4",
+        "target": "T3/test/4",
+        "target_scenario": "T3",
+        "source_holonomy": 44.421778001281886,
+        "target_holonomy_orig": 42.76328466060235,
+        "target_holonomy_patched": 44.421778001281886,
+        "delta": 1.6584933406795344,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/5",
+        "target": "T3/test/5",
+        "target_scenario": "T3",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 39.23439798902624,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": 0.7707464074454506,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/6",
+        "target": "T3/test/6",
+        "target_scenario": "T3",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 39.23439798902624,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": 0.7707464074454506,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/7",
+        "target": "T3/test/7",
+        "target_scenario": "T3",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 41.92281860568647,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -1.0511309880327957,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/8",
+        "target": "T3/test/8",
+        "target_scenario": "T3",
+        "source_holonomy": 43.688414523977606,
+        "target_holonomy_orig": 39.23076175414118,
+        "target_holonomy_patched": 43.688414523977606,
+        "delta": 4.457652769836429,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/9",
+        "target": "T3/test/9",
+        "target_scenario": "T3",
+        "source_holonomy": 38.4252842621487,
+        "target_holonomy_orig": 40.09454077133942,
+        "target_holonomy_patched": 38.4252842621487,
+        "delta": -1.669256509190717,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/0",
+        "target": "T4/test/0",
+        "target_scenario": "T4",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 42.30983749948468,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": -2.304693103012987,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/1",
+        "target": "T4/test/1",
+        "target_scenario": "T4",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 42.107289787419475,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -1.235602169765798,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/2",
+        "target": "T4/test/2",
+        "target_scenario": "T4",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 42.107289787419475,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -1.235602169765798,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/3",
+        "target": "T4/test/3",
+        "target_scenario": "T4",
+        "source_holonomy": 40.72466197133412,
+        "target_holonomy_orig": 44.133511885299185,
+        "target_holonomy_patched": 40.72466197133412,
+        "delta": -3.4088499139650636,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/4",
+        "target": "T4/test/4",
+        "target_scenario": "T4",
+        "source_holonomy": 44.421778001281886,
+        "target_holonomy_orig": 41.55793871271301,
+        "target_holonomy_patched": 44.421778001281886,
+        "delta": 2.863839288568876,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/5",
+        "target": "T4/test/5",
+        "target_scenario": "T4",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 42.30983749948468,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": -2.304693103012987,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/6",
+        "target": "T4/test/6",
+        "target_scenario": "T4",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 42.30983749948468,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": -2.304693103012987,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/7",
+        "target": "T4/test/7",
+        "target_scenario": "T4",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 42.107289787419475,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": -1.235602169765798,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/8",
+        "target": "T4/test/8",
+        "target_scenario": "T4",
+        "source_holonomy": 43.688414523977606,
+        "target_holonomy_orig": 42.407071179047236,
+        "target_holonomy_patched": 43.688414523977606,
+        "delta": 1.2813433449303702,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/9",
+        "target": "T4/test/9",
+        "target_scenario": "T4",
+        "source_holonomy": 38.4252842621487,
+        "target_holonomy_orig": 39.15358698063053,
+        "target_holonomy_patched": 38.4252842621487,
+        "delta": -0.728302718481828,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/0",
+        "target": "T5/test/0",
+        "target_scenario": "T5",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 38.31485024918604,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": 1.6902941472856554,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/1",
+        "target": "T5/test/1",
+        "target_scenario": "T5",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 39.953635667893444,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": 0.9180519497602333,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/2",
+        "target": "T5/test/2",
+        "target_scenario": "T5",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 39.953635667893444,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": 0.9180519497602333,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/3",
+        "target": "T5/test/3",
+        "target_scenario": "T5",
+        "source_holonomy": 40.72466197133412,
+        "target_holonomy_orig": 41.853475268610566,
+        "target_holonomy_patched": 40.72466197133412,
+        "delta": -1.1288132972764444,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/4",
+        "target": "T5/test/4",
+        "target_scenario": "T5",
+        "source_holonomy": 44.421778001281886,
+        "target_holonomy_orig": 42.107727934858154,
+        "target_holonomy_patched": 44.421778001281886,
+        "delta": 2.3140500664237322,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/5",
+        "target": "T5/test/5",
+        "target_scenario": "T5",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 38.31485024918604,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": 1.6902941472856554,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/6",
+        "target": "T5/test/6",
+        "target_scenario": "T5",
+        "source_holonomy": 40.00514439647169,
+        "target_holonomy_orig": 38.31485024918604,
+        "target_holonomy_patched": 40.00514439647169,
+        "delta": 1.6902941472856554,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/7",
+        "target": "T5/test/7",
+        "target_scenario": "T5",
+        "source_holonomy": 40.87168761765368,
+        "target_holonomy_orig": 39.953635667893444,
+        "target_holonomy_patched": 40.87168761765368,
+        "delta": 0.9180519497602333,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/8",
+        "target": "T5/test/8",
+        "target_scenario": "T5",
+        "source_holonomy": 43.688414523977606,
+        "target_holonomy_orig": 41.27031866388412,
+        "target_holonomy_patched": 43.688414523977606,
+        "delta": 2.418095860093487,
+        "shifted_toward_source": true
+      },
+      {
+        "source": "T1/test/9",
+        "target": "T5/test/9",
+        "target_scenario": "T5",
+        "source_holonomy": 38.4252842621487,
+        "target_holonomy_orig": 40.901783504187925,
+        "target_holonomy_patched": 38.4252842621487,
+        "delta": -2.4764992420392247,
+        "shifted_toward_source": true
+      }
+    ]
+  },
+  "layer_specific": {
+    "most_causal_layer": 31,
+    "per_layer_mean_delta": {
+      "0": -0.26056859993904313,
+      "1": -0.2341986632059104,
+      "2": -3.039658890821589,
+      "3": -2.9054203171656257,
+      "4": -3.0190963581115184,
+      "5": -3.0577407819657068,
+      "6": -2.602184011058435,
+      "7": -2.7511502943035495,
+      "8": -2.690701842717428,
+      "9": -2.4848862779781298,
+      "10": -2.4406835037713948,
+      "11": -2.5416766065814884,
+      "12": -2.835440821515101,
+      "13": -2.802411817846722,
+      "14": -2.645491025951621,
+      "15": -3.0925136041601746,
+      "16": -3.481076240120193,
+      "17": -3.635284112073518,
+      "18": -4.089904088669009,
+      "19": -4.260495644850842,
+      "20": -4.656059879631849,
+      "21": -4.810749334031112,
+      "22": -4.766379549446123,
+      "23": -5.055423194143474,
+      "24": -5.308158528480353,
+      "25": -5.256495502074971,
+      "26": -5.237952417755542,
+      "27": -4.624421774699401,
+      "28": -5.485749991689492,
+      "29": -4.893522291902289,
+      "30": -5.125034828407561,
+      "31": -6.193714572950784
+    }
+  },
+  "group_patching": {
+    "most_causal_group": "pos",
+    "per_group_mean_delta": {
+      "min": -0.03842923753542493,
+      "mor": -0.0033159725790284254,
+      "nar": -0.06438668561322772,
+      "pos": -0.07992631815268254,
+      "soc": -0.07144573166570609
+    }
+  }
+}
