@@ -95,6 +95,7 @@ def compute_holonomy_with_gamma(
     value_matrices: np.ndarray,
     device: torch.device = None,
     layer: int = None,
+    batch_size: int = 8,
 ) -> pd.DataFrame:
     """Compute holonomy deviation for all conversations using a given gamma.
 
@@ -112,6 +113,8 @@ def compute_holonomy_with_gamma(
         GPU device. Defaults to CUDA if available, else CPU.
     layer : int, optional
         If specified, compute only for this layer. If None, compute for all layers.
+    batch_size : int
+        Number of conversations per GPU batch. Default 8 (~0.5GB GPU memory).
 
     Returns
     -------
@@ -122,16 +125,13 @@ def compute_holonomy_with_gamma(
         _batched_transport,
         _batched_curvature,
         compute_projection_bases,
+        EPSILON_INV,
     )
-
-    from experiments.curvature.compute import EPSILON_INV
 
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     n_layers = value_matrices.shape[0]
-
-    # Prepare GPU tensors (gamma only; V loaded per-layer to save memory)
     gamma_t = torch.as_tensor(gamma, device=device, dtype=torch.long)
 
     all_conv_ids = sorted(activations.keys())
@@ -143,60 +143,77 @@ def compute_holonomy_with_gamma(
 
     rows = []
     for layer in layers_to_compute:
-        # Load value matrices for this layer only (saves ~2GB vs loading all layers)
-        V_layer = np.array(value_matrices[layer]).astype(np.float32)  # (n_heads, d_model, d_head)
-        V_layer_3d = V_layer[np.newaxis, ...]  # (1, n_heads, d_model, d_head) for _build_P_stack
+        # Load value matrices for this layer only
+        V_layer = np.array(value_matrices[layer]).astype(np.float32)
+        V_layer_3d = V_layer[np.newaxis, ...]
         V_layer_t = torch.as_tensor(V_layer_3d, device=device, dtype=torch.float32)
 
         # Build P_stack and projection bases for this gamma + layer
-        P_stack_t = _build_P_stack(V_layer_t, gamma_t, 0, device)  # layer=0 since V is single-layer
+        P_stack_t = _build_P_stack(V_layer_t, gamma_t, 0, device)
         proj_bases = compute_projection_bases(V_layer_3d, gamma, 0)
 
-        # Compute U_exp from T1 baseline (one at a time to save memory)
-        t1_products = []
+        # --- Batched T1 baseline ---
+        t1_attn_list = []
         for conv_id in t1_ids:
             attn_np = activations[conv_id]["attention"].astype(np.float32)
-            attn = torch.as_tensor(attn_np, device=device, dtype=torch.float32).unsqueeze(0)
-            u12 = _batched_transport(attn, P_stack_t, gamma_t, 0, 1, layer)
-            u23 = _batched_transport(attn, P_stack_t, gamma_t, 1, 2, layer)
-            t1_products.append(torch.bmm(u12, u23).squeeze(0))
-            del attn, u12, u23
-        U_exp = torch.stack(t1_products, dim=0).mean(dim=0)
-        del t1_products
+            t1_attn_list.append(torch.as_tensor(attn_np, device=device, dtype=torch.float32))
+        t1_attn_batch = torch.stack(t1_attn_list, dim=0)  # (N_T1, n_layers, n_heads, n_events, n_events)
+        del t1_attn_list
+
+        u12_t1 = _batched_transport(t1_attn_batch, P_stack_t, gamma_t, 0, 1, layer)
+        u23_t1 = _batched_transport(t1_attn_batch, P_stack_t, gamma_t, 1, 2, layer)
+        t1_products = torch.bmm(u12_t1, u23_t1)  # (N_T1, d_model, d_model)
+        U_exp = t1_products.mean(dim=0)  # (d_model, d_model)
+        del t1_attn_batch, u12_t1, u23_t1, t1_products
+
         U_exp_inv = torch.linalg.inv(U_exp + EPSILON_INV * torch.eye(
             U_exp.shape[0], device=device, dtype=torch.float32
         ))
 
-        # Process one conversation at a time (peak memory: ~500MB vs 4GB+ with batching)
-        U_exp_inv_1 = U_exp_inv.unsqueeze(0)  # (1, d, d)
-        I_d = torch.eye(U_exp.shape[0], device=device, dtype=torch.float32)
-        for conv_id in all_conv_ids:
-            attn_np = activations[conv_id]["attention"].astype(np.float32)
-            attn = torch.as_tensor(attn_np, device=device, dtype=torch.float32).unsqueeze(0)
-            u12 = _batched_transport(attn, P_stack_t, gamma_t, 0, 1, layer)
-            u23 = _batched_transport(attn, P_stack_t, gamma_t, 1, 2, layer)
-            F = torch.bmm(torch.bmm(u12, u23), U_exp_inv_1)
-            deviation = F - I_d
+        # --- Batched conversation processing ---
+        for batch_start in range(0, len(all_conv_ids), batch_size):
+            batch_ids = all_conv_ids[batch_start : batch_start + batch_size]
+            B = len(batch_ids)
 
-            scenario = conv_id.split("/")[0]
-            row = {"conversation_id": conv_id, "scenario": scenario, "layer": layer}
-            total_sq = 0.0
-            for k, Q_k in enumerate(proj_bases):
-                Q_t = torch.as_tensor(Q_k, device=device, dtype=torch.float32)
-                proj_dev = Q_t.T @ deviation.squeeze(0) @ Q_t
-                norm = float(torch.linalg.vector_norm(proj_dev).item())
-                row[f"curvature_{LAYER_NAMES[k]}"] = norm
-                total_sq += norm ** 2
-            row["curvature_total"] = float(np.sqrt(total_sq))
-            rows.append(row)
-            del attn, u12, u23, F, deviation
+            # Stack attention into batch tensor
+            attn_list = []
+            for conv_id in batch_ids:
+                attn_np = activations[conv_id]["attention"].astype(np.float32)
+                attn_list.append(torch.as_tensor(attn_np, device=device, dtype=torch.float32))
+            attn_batch = torch.stack(attn_list, dim=0)  # (B, n_layers, n_heads, n_events, n_events)
+            del attn_list
 
-        del P_stack_t, U_exp, U_exp_inv, U_exp_inv_1, I_d, V_layer_t, V_layer, V_layer_3d
+            # Batched transport operators
+            U_12 = _batched_transport(attn_batch, P_stack_t, gamma_t, 0, 1, layer)
+            U_23 = _batched_transport(attn_batch, P_stack_t, gamma_t, 1, 2, layer)
+            del attn_batch
+
+            # Expand U_exp_inv for batched matmul
+            U_exp_inv_batch = U_exp_inv.unsqueeze(0).expand(B, -1, -1)
+
+            # Batched curvature and block norms (uses _batched_curvature from compute.py)
+            F, block_norms_list = _batched_curvature(
+                U_12, U_23, U_exp_inv_batch, proj_bases, device
+            )
+            del U_12, U_23, U_exp_inv_batch, F
+
+            # Extract results
+            for i, conv_id in enumerate(batch_ids):
+                scenario = conv_id.split("/")[0]
+                row = {"conversation_id": conv_id, "scenario": scenario, "layer": layer}
+                curvatures = {}
+                for idx, name in enumerate(LAYER_NAMES):
+                    curvatures[name] = float(block_norms_list[idx][i])
+                curvature_total = float(np.sqrt(sum(v ** 2 for v in curvatures.values())))
+                for name in LAYER_NAMES:
+                    row[f"curvature_{name}"] = curvatures[name]
+                row["curvature_total"] = curvature_total
+                rows.append(row)
+
+        del P_stack_t, U_exp, U_exp_inv, V_layer_t, V_layer, V_layer_3d
         gc.collect()
 
-    # Free GPU tensors
     del gamma_t
-
     return pd.DataFrame(rows)
 
 

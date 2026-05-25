@@ -98,6 +98,7 @@ def _compute_holonomy_batch(
     t1_ids: List[str],
     device: torch.device,
     layer: Optional[int] = None,
+    batch_size: int = 8,
 ) -> pd.DataFrame:
     """Compute holonomy deviation for a set of conversations.
 
@@ -108,7 +109,6 @@ def _compute_holonomy_batch(
     gamma_t = torch.as_tensor(gamma, device=device, dtype=torch.long)
     layers_to_compute = [layer] if layer is not None else list(range(n_layers))
 
-    # Compute U_exp from T1 baseline
     rows = []
     for lay in layers_to_compute:
         V_layer = np.array(V[lay]).astype(np.float32)
@@ -118,46 +118,60 @@ def _compute_holonomy_batch(
         P_stack_t = _build_P_stack(V_layer_t, gamma_t, 0, device)
         proj_bases = compute_projection_bases(V_layer_3d, gamma, 0)
 
-        # U_exp from T1
-        t1_products = []
+        # --- Batched T1 baseline ---
+        t1_attn_list = []
         for cid in t1_ids:
             attn_np = activations[cid]["attention"].astype(np.float32)
-            attn = torch.as_tensor(attn_np, device=device, dtype=torch.float32).unsqueeze(0)
-            u12 = _batched_transport(attn, P_stack_t, gamma_t, 0, 1, lay)
-            u23 = _batched_transport(attn, P_stack_t, gamma_t, 1, 2, lay)
-            t1_products.append(torch.bmm(u12, u23).squeeze(0))
-            del attn, u12, u23
-        U_exp = torch.stack(t1_products, dim=0).mean(dim=0)
-        del t1_products
+            t1_attn_list.append(torch.as_tensor(attn_np, device=device, dtype=torch.float32))
+        t1_attn_batch = torch.stack(t1_attn_list, dim=0)
+        del t1_attn_list
+
+        u12_t1 = _batched_transport(t1_attn_batch, P_stack_t, gamma_t, 0, 1, lay)
+        u23_t1 = _batched_transport(t1_attn_batch, P_stack_t, gamma_t, 1, 2, lay)
+        t1_products = torch.bmm(u12_t1, u23_t1)
+        U_exp = t1_products.mean(dim=0)
+        del t1_attn_batch, u12_t1, u23_t1, t1_products
+
         U_exp_inv = torch.linalg.inv(U_exp + EPSILON_INV * torch.eye(
             U_exp.shape[0], device=device, dtype=torch.float32
         ))
 
-        # Process each conversation
-        U_exp_inv_1 = U_exp_inv.unsqueeze(0)
-        I_d = torch.eye(U_exp.shape[0], device=device, dtype=torch.float32)
-        for cid in conv_ids:
-            attn_np = activations[cid]["attention"].astype(np.float32)
-            attn = torch.as_tensor(attn_np, device=device, dtype=torch.float32).unsqueeze(0)
-            u12 = _batched_transport(attn, P_stack_t, gamma_t, 0, 1, lay)
-            u23 = _batched_transport(attn, P_stack_t, gamma_t, 1, 2, lay)
-            F = torch.bmm(torch.bmm(u12, u23), U_exp_inv_1)
-            deviation = F - I_d
+        # --- Batched conversation processing ---
+        for batch_start in range(0, len(conv_ids), batch_size):
+            batch_ids = conv_ids[batch_start : batch_start + batch_size]
+            B = len(batch_ids)
 
-            scenario = cid.split("/")[0]
-            row = {"conversation_id": cid, "scenario": scenario, "layer": lay}
-            total_sq = 0.0
-            for k, Q_k in enumerate(proj_bases):
-                Q_t = torch.as_tensor(Q_k, device=device, dtype=torch.float32)
-                proj_dev = Q_t.T @ deviation.squeeze(0) @ Q_t
-                norm = float(torch.linalg.vector_norm(proj_dev).item())
-                row[f"curvature_{LAYER_NAMES[k]}"] = norm
-                total_sq += norm ** 2
-            row["curvature_total"] = float(np.sqrt(total_sq))
-            rows.append(row)
-            del attn, u12, u23, F, deviation
+            attn_list = []
+            for cid in batch_ids:
+                attn_np = activations[cid]["attention"].astype(np.float32)
+                attn_list.append(torch.as_tensor(attn_np, device=device, dtype=torch.float32))
+            attn_batch = torch.stack(attn_list, dim=0)
+            del attn_list
 
-        del P_stack_t, U_exp, U_exp_inv, U_exp_inv_1, I_d, V_layer_t, V_layer, V_layer_3d
+            U_12 = _batched_transport(attn_batch, P_stack_t, gamma_t, 0, 1, lay)
+            U_23 = _batched_transport(attn_batch, P_stack_t, gamma_t, 1, 2, lay)
+            del attn_batch
+
+            U_exp_inv_batch = U_exp_inv.unsqueeze(0).expand(B, -1, -1)
+
+            F, block_norms_list = _batched_curvature(
+                U_12, U_23, U_exp_inv_batch, proj_bases, device
+            )
+            del U_12, U_23, U_exp_inv_batch, F
+
+            for i, cid in enumerate(batch_ids):
+                scenario = cid.split("/")[0]
+                row = {"conversation_id": cid, "scenario": scenario, "layer": lay}
+                curvatures = {}
+                for idx, name in enumerate(LAYER_NAMES):
+                    curvatures[name] = float(block_norms_list[idx][i])
+                curvature_total = float(np.sqrt(sum(v ** 2 for v in curvatures.values())))
+                for name in LAYER_NAMES:
+                    row[f"curvature_{name}"] = curvatures[name]
+                row["curvature_total"] = curvature_total
+                rows.append(row)
+
+        del P_stack_t, U_exp, U_exp_inv, V_layer_t, V_layer, V_layer_3d
         gc.collect()
 
     del gamma_t
