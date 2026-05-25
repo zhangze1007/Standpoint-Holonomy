@@ -276,7 +276,7 @@ The T0 > failure pattern holds consistently across all 5 standpoint blocks (min,
 | **Learned γ** | **0.4200** | — |
 | Random (20 instances) | 0.4200 – 0.4222 | Complete |
 | Shuffled (20 instances) | 0.4197 – 0.4223 | Complete |
-| Layer-uniform | — | Partial (budget limit) |
+| Layer-uniform (15/20) | 0.4201 (stable) | 75% complete |
 
 ### Key Finding: Learned γ ≈ Null γ
 
