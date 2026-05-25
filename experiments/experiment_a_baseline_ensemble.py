@@ -14,6 +14,7 @@ Outputs:
 - Robustness summary
 """
 
+import gc
 import json
 import sys
 from pathlib import Path
@@ -282,6 +283,10 @@ def run_with_activations(model_name: str, results_dir: Path) -> dict:
         if key in raw.files:
             attn_np = raw[key].astype(np.float32)
             attn_gpu[conv_id] = torch.as_tensor(attn_np, device=device, dtype=torch.float32)
+
+    # Free raw data to reduce memory (activations.npz is ~1.4GB)
+    del raw
+    gc.collect()
 
     gamma_t = torch.as_tensor(gamma, device=device, dtype=torch.long)
     V_t = torch.as_tensor(V.astype(np.float32), device=device, dtype=torch.float32)

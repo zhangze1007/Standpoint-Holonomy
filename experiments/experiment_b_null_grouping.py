@@ -17,6 +17,7 @@ Outputs:
 - Statistical significance of learned grouping
 """
 
+import gc
 import json
 import sys
 from pathlib import Path
@@ -130,69 +131,71 @@ def compute_holonomy_with_gamma(
 
     n_layers = value_matrices.shape[0]
 
-    # Prepare GPU tensors
+    # Prepare GPU tensors (gamma only; V loaded per-layer to save memory)
     gamma_t = torch.as_tensor(gamma, device=device, dtype=torch.long)
-    V_t = torch.as_tensor(value_matrices.astype(np.float32), device=device, dtype=torch.float32)
 
     all_conv_ids = sorted(activations.keys())
     t1_ids = [c for c in all_conv_ids if c.startswith("T1/")]
     if not t1_ids:
         raise ValueError("No T1 conversations found")
 
-    # Pre-stack all attention tensors on GPU
-    attn_gpu = {}
-    for conv_id in all_conv_ids:
-        attn_np = activations[conv_id]["attention"].astype(np.float32)
-        attn_gpu[conv_id] = torch.as_tensor(attn_np, device=device, dtype=torch.float32)
-
     layers_to_compute = [layer] if layer is not None else list(range(n_layers))
 
     rows = []
     for layer in layers_to_compute:
-        # Build P_stack and projection bases for this gamma + layer
-        P_stack_t = _build_P_stack(V_t, gamma_t, layer, device)
-        proj_bases = compute_projection_bases(value_matrices, gamma, layer)
+        # Load value matrices for this layer only (saves ~2GB vs loading all layers)
+        V_layer = np.array(value_matrices[layer]).astype(np.float32)  # (n_heads, d_model, d_head)
+        V_layer_3d = V_layer[np.newaxis, ...]  # (1, n_heads, d_model, d_head) for _build_P_stack
+        V_layer_t = torch.as_tensor(V_layer_3d, device=device, dtype=torch.float32)
 
-        # Compute U_exp from T1 baseline
+        # Build P_stack and projection bases for this gamma + layer
+        P_stack_t = _build_P_stack(V_layer_t, gamma_t, 0, device)  # layer=0 since V is single-layer
+        proj_bases = compute_projection_bases(V_layer_3d, gamma, 0)
+
+        # Compute U_exp from T1 baseline (one at a time to save memory)
         t1_products = []
         for conv_id in t1_ids:
-            attn = attn_gpu[conv_id].unsqueeze(0)  # (1, n_heads, n_events, n_events)
+            attn_np = activations[conv_id]["attention"].astype(np.float32)
+            attn = torch.as_tensor(attn_np, device=device, dtype=torch.float32).unsqueeze(0)
             u12 = _batched_transport(attn, P_stack_t, gamma_t, 0, 1, layer)
             u23 = _batched_transport(attn, P_stack_t, gamma_t, 1, 2, layer)
             t1_products.append(torch.bmm(u12, u23).squeeze(0))
+            del attn, u12, u23
         U_exp = torch.stack(t1_products, dim=0).mean(dim=0)
+        del t1_products
         U_exp_inv = torch.linalg.inv(U_exp + EPSILON_INV * torch.eye(
             U_exp.shape[0], device=device, dtype=torch.float32
         ))
 
-        # Batch all conversations at once
-        attn_batch = torch.stack([attn_gpu[c] for c in all_conv_ids], dim=0)
-        U_12 = _batched_transport(attn_batch, P_stack_t, gamma_t, 0, 1, layer)
-        U_23 = _batched_transport(attn_batch, P_stack_t, gamma_t, 1, 2, layer)
-        U_exp_inv_batch = U_exp_inv.unsqueeze(0).expand(len(all_conv_ids), -1, -1)
-        F_batch, block_norms_list = _batched_curvature(U_12, U_23, U_exp_inv_batch, proj_bases, device)
+        # Process one conversation at a time (peak memory: ~500MB vs 4GB+ with batching)
+        U_exp_inv_1 = U_exp_inv.unsqueeze(0)  # (1, d, d)
+        I_d = torch.eye(U_exp.shape[0], device=device, dtype=torch.float32)
+        for conv_id in all_conv_ids:
+            attn_np = activations[conv_id]["attention"].astype(np.float32)
+            attn = torch.as_tensor(attn_np, device=device, dtype=torch.float32).unsqueeze(0)
+            u12 = _batched_transport(attn, P_stack_t, gamma_t, 0, 1, layer)
+            u23 = _batched_transport(attn, P_stack_t, gamma_t, 1, 2, layer)
+            F = torch.bmm(torch.bmm(u12, u23), U_exp_inv_1)
+            deviation = F - I_d
 
-        # Build rows
-        total_norms = np.zeros(len(all_conv_ids))
-        for bn in block_norms_list:
-            total_norms += bn ** 2
-        total_norms = np.sqrt(total_norms)
-
-        block_names = LAYER_NAMES
-        for idx, conv_id in enumerate(all_conv_ids):
             scenario = conv_id.split("/")[0]
             row = {"conversation_id": conv_id, "scenario": scenario, "layer": layer}
-            for k, name in enumerate(block_names):
-                row[f"curvature_{name}"] = float(block_norms_list[k][idx])
-            row["curvature_total"] = float(total_norms[idx])
+            total_sq = 0.0
+            for k, Q_k in enumerate(proj_bases):
+                Q_t = torch.as_tensor(Q_k, device=device, dtype=torch.float32)
+                proj_dev = Q_t.T @ deviation.squeeze(0) @ Q_t
+                norm = float(torch.linalg.vector_norm(proj_dev).item())
+                row[f"curvature_{LAYER_NAMES[k]}"] = norm
+                total_sq += norm ** 2
+            row["curvature_total"] = float(np.sqrt(total_sq))
             rows.append(row)
+            del attn, u12, u23, F, deviation
 
-        del P_stack_t, U_exp, U_exp_inv, attn_batch, U_12, U_23, F_batch
+        del P_stack_t, U_exp, U_exp_inv, U_exp_inv_1, I_d, V_layer_t, V_layer, V_layer_3d
+        gc.collect()
 
     # Free GPU tensors
-    del attn_gpu, gamma_t, V_t
-    if device.type == "cuda":
-        torch.cuda.empty_cache()
+    del gamma_t
 
     return pd.DataFrame(rows)
 
@@ -252,50 +255,60 @@ def run_experiment_b(model_name: str, results_dir: Path = RESULTS_DIR) -> dict:
             "permutation_p_value": None,
         }
 
-    # Load data
+    # Load data — use split files to avoid loading 2GB value matrices into RAM
     print("Loading activations and grouping ...")
-    raw = np.load(activations_path, allow_pickle=False)
     grouping = np.load(gamma_path, allow_pickle=False)
     gamma = grouping["gamma"]
 
-    # Load value matrices
-    if "value_matrices" in raw.files:
-        V = raw["value_matrices"]
+    # Check for split files first (memory-efficient), fall back to original
+    attn_only_path = CACHE_DIR / model_name / "attention_only.npz"
+    value_layers_dir = CACHE_DIR / model_name / "value_layers"
+
+    if attn_only_path.exists() and value_layers_dir.exists():
+        # Use split files (low memory)
+        attn_raw = np.load(attn_only_path, allow_pickle=False)
+        activations = {}
+        for key in attn_raw.files:
+            parts = key.rsplit("/", 1)
+            if len(parts) >= 2 and "/test/" in parts[0]:
+                activations[parts[0]] = {"attention": attn_raw[key]}
+        attn_raw.close()
+        n_layers = len(list(value_layers_dir.glob("layer_*.npy")))
+        print(f"  Using split files: {len(activations)} conversations, {n_layers} layers")
+
+        # Create a thin wrapper that loads V per-layer on demand
+        class VPerLayer:
+            def __init__(self, layer_dir, n_layers):
+                self._dir = layer_dir
+                self.shape = (n_layers, 32, 4096, 128)  # shape for compatibility
+            def __getitem__(self, idx):
+                return np.load(self._dir / f"layer_{idx:02d}.npy")
+        V_full = VPerLayer(value_layers_dir, n_layers)
     else:
-        # Find from first conversation
+        # Fall back to original file (needs more RAM)
+        raw = np.load(activations_path, allow_pickle=False, mmap_mode='r')
+        activations = {}
         for key in raw.files:
-            if "value_matrices" in key:
-                V = raw[key]
-                break
+            parts = key.rsplit("/", 1)
+            if len(parts) >= 2 and "/test/" in parts[0] and parts[1] == "attention":
+                activations[parts[0]] = {"attention": np.array(raw[key])}
+        V_full = raw["value_matrices"]
+        n_layers = V_full.shape[0]
 
-    # Reorganize activations
-    conv_data = {}
-    for key in raw.files:
-        parts = key.rsplit("/", 1)
-        if len(parts) < 2 or "/test/" not in parts[0]:
-            continue
-        conv_id, field = parts
-        if conv_id not in conv_data:
-            conv_data[conv_id] = {}
-        conv_data[conv_id][field] = raw[key]
-
-    # Extract attention arrays
-    activations = {}
-    for conv_id, fields in conv_data.items():
-        if "attention" in fields:
-            activations[conv_id] = {"attention": fields["attention"]}
-
-    print(f"  Loaded {len(activations)} conversations, {len(gamma)} heads")
+    print(f"  Loaded {len(activations)} conversations, {len(gamma)} heads, {n_layers} layers")
 
     # Compute learned gamma H3
     print("\nComputing holonomy with learned gamma ...")
-    df_learned = compute_holonomy_with_gamma(activations, gamma, V)
+    df_learned = compute_holonomy_with_gamma(activations, gamma, V_full)
     learned_eps = h3_epsilon_sq(df_learned)
     print(f"  Learned γ: H3 ε² = {learned_eps:.4f}")
 
     # Generate null groupings
     print("\nGenerating null groupings (20 instances each) ...")
-    null_groupings = generate_null_groupings(gamma, n_null=20, seed=42)
+    import os
+    n_null = int(os.environ.get("LCESA_N_NULL", "20"))
+    print(f"  Using n_null={n_null} (set LCESA_N_NULL env var to override)")
+    null_groupings = generate_null_groupings(gamma, n_null=n_null, seed=42)
 
     # Compute H3 for each null grouping
     null_results = {}
@@ -304,7 +317,7 @@ def run_experiment_b(model_name: str, results_dir: Path = RESULTS_DIR) -> dict:
         eps_values = []
         for i, gamma_null in enumerate(gammas):
             try:
-                df_null = compute_holonomy_with_gamma(activations, gamma_null, V)
+                df_null = compute_holonomy_with_gamma(activations, gamma_null, V_full)
                 eps = h3_epsilon_sq(df_null)
                 eps_values.append(eps)
                 if (i + 1) % 5 == 0:
