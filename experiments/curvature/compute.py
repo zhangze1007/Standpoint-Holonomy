@@ -560,3 +560,94 @@ if __name__ == "__main__":
         gamma_path = Path("data") / f"{model_name}_grouping.npz"
 
     run_curvature_computation(model_name, activations_path, gamma_path)
+
+
+def compute_projection_bases_gpu(
+    value_matrices: np.ndarray,
+    gamma: np.ndarray,
+    layer: int,
+    device: torch.device,
+    energy_threshold: float = 0.9,
+) -> list:
+    """GPU-accelerated version of compute_projection_bases using torch.linalg.svd."""
+    d_model = value_matrices.shape[2]
+    n_standpoint = len(LAYER_NAMES)
+    bases = []
+    for k in range(n_standpoint):
+        head_indices = np.where(gamma == k)[0]
+        if len(head_indices) == 0:
+            bases.append(np.eye(d_model, dtype=np.float32))
+            continue
+        V_concat = np.concatenate(
+            [value_matrices[layer, h] for h in head_indices], axis=1
+        )
+        V_t = torch.as_tensor(V_concat, device=device, dtype=torch.float32)
+        U, s, _ = torch.linalg.svd(V_t, full_matrices=False)
+        s_np = s.cpu().numpy()
+        energy = np.cumsum(s_np ** 2) / np.sum(s_np ** 2)
+        rank = int(np.searchsorted(energy, energy_threshold)) + 1
+        rank = min(rank, len(s_np))
+        Q_k = U[:, :rank].cpu().numpy()
+        bases.append(Q_k)
+        del V_t, U, s
+    return bases
+
+
+def build_layer_cache(
+    V: np.ndarray,
+    gamma: np.ndarray,
+    t1_activations: dict,
+    device: torch.device,
+) -> list:
+    """Pre-compute P_stack, proj_bases, U_exp_inv for all layers.
+    
+    Use when gamma is fixed (causal_patching, ablation) to avoid
+    recomputing these expensive quantities on every holonomy call.
+    
+    Returns list of dicts, one per layer, each with keys:
+        P_stack, proj_bases, U_exp_inv
+    """
+    n_layers = V.shape[0]
+    gamma_t = torch.as_tensor(gamma, device=device, dtype=torch.long)
+    t1_ids = sorted(t1_activations.keys())
+
+    cache = []
+    print(f"  Building layer cache ({n_layers} layers) ...")
+    for layer in range(n_layers):
+        V_layer = np.array(V[layer]).astype(np.float32)
+        V_layer_3d = V_layer[np.newaxis, ...]
+        V_layer_t = torch.as_tensor(V_layer_3d, device=device, dtype=torch.float32)
+
+        P_stack = _build_P_stack(V_layer_t, gamma_t, 0, device)
+        proj_bases = compute_projection_bases_gpu(V_layer_3d, gamma, 0, device)
+
+        # Pre-compute U_exp_inv from T1 baseline
+        t1_attn_list = [
+            torch.as_tensor(t1_activations[cid]["attention"].astype(np.float32), device=device)
+            for cid in t1_ids
+        ]
+        t1_batch = torch.stack(t1_attn_list, dim=0)
+        del t1_attn_list
+
+        u12 = _batched_transport(t1_batch, P_stack, gamma_t, 0, 1, layer)
+        u23 = _batched_transport(t1_batch, P_stack, gamma_t, 1, 2, layer)
+        U_exp = torch.bmm(u12, u23).mean(dim=0)
+        del t1_batch, u12, u23
+
+        U_exp_inv = torch.linalg.inv(
+            U_exp + EPSILON_INV * torch.eye(U_exp.shape[0], device=device, dtype=torch.float32)
+        )
+        del U_exp, V_layer_t, V_layer, V_layer_3d
+
+        cache.append({
+            "P_stack": P_stack,
+            "proj_bases": proj_bases,
+            "U_exp_inv": U_exp_inv,
+        })
+        if (layer + 1) % 8 == 0:
+            print(f"    cached {layer+1}/{n_layers} layers")
+
+    del gamma_t
+    torch.cuda.empty_cache()
+    print(f"  Layer cache ready.")
+    return cache

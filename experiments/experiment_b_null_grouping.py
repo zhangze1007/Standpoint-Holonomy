@@ -30,6 +30,7 @@ from scipy import stats
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from experiments.config import RESULTS_DIR, CACHE_DIR, LAYER_NAMES, ALPHA
+from experiments.curvature.compute import compute_projection_bases_gpu
 
 
 def generate_null_groupings(
@@ -150,7 +151,7 @@ def compute_holonomy_with_gamma(
 
         # Build P_stack and projection bases for this gamma + layer
         P_stack_t = _build_P_stack(V_layer_t, gamma_t, 0, device)
-        proj_bases = compute_projection_bases(V_layer_3d, gamma, 0)
+        proj_bases = compute_projection_bases_gpu(V_layer_3d, gamma, 0, device)
 
         # --- Batched T1 baseline ---
         t1_attn_list = []
@@ -312,14 +313,15 @@ def run_experiment_b(model_name: str, results_dir: Path = RESULTS_DIR) -> dict:
             parts = key.rsplit("/", 1)
             if len(parts) >= 2 and "/test/" in parts[0] and parts[1] == "attention":
                 activations[parts[0]] = {"attention": np.array(raw[key])}
-        V_full = raw["value_matrices"]
+        print("  Pre-loading value matrices into RAM ...")
+        V_full = np.array(raw["value_matrices"]).astype(np.float32)
         n_layers = V_full.shape[0]
 
     print(f"  Loaded {len(activations)} conversations, {len(gamma)} heads, {n_layers} layers")
 
     # Compute learned gamma H3
     print("\nComputing holonomy with learned gamma ...")
-    df_learned = compute_holonomy_with_gamma(activations, gamma, V_full)
+    df_learned = compute_holonomy_with_gamma(activations, gamma, V_full, device=device)
     learned_eps = h3_epsilon_sq(df_learned)
     print(f"  Learned γ: H3 ε² = {learned_eps:.4f}")
 
@@ -337,7 +339,7 @@ def run_experiment_b(model_name: str, results_dir: Path = RESULTS_DIR) -> dict:
         eps_values = []
         for i, gamma_null in enumerate(gammas):
             try:
-                df_null = compute_holonomy_with_gamma(activations, gamma_null, V_full)
+                df_null = compute_holonomy_with_gamma(activations, gamma_null, V_full, device=device)
                 eps = h3_epsilon_sq(df_null)
                 eps_values.append(eps)
                 if (i + 1) % 5 == 0:

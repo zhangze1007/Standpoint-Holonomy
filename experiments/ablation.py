@@ -23,6 +23,7 @@ from experiments.config import (
 )
 from experiments.curvature.compute import (
     compute_projection_bases,
+    compute_projection_bases_gpu,
     _build_P_stack,
     _batched_transport,
     _batched_curvature,
@@ -94,7 +95,9 @@ def _gpu_curvature_for_condition(
         P_stack = _build_P_stack(V_t, gamma_t, layer, device)
 
         # Projection bases for block norms
-        proj_bases = compute_projection_bases(value_matrices.astype(np.float32), gamma, layer)
+        V_layer_slice = value_matrices[layer] if value_matrices.ndim == 4 else value_matrices[0]
+        V_3d = V_layer_slice[np.newaxis, ...].astype(np.float32)
+        proj_bases = compute_projection_bases_gpu(V_3d, gamma, 0, device)
 
         # Compute U_exp from T1 baseline
         t1_ids = [c for c in all_conv_ids if c.startswith("T1/")]

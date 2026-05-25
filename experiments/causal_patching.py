@@ -42,6 +42,8 @@ from experiments.curvature.compute import (
     _batched_transport,
     _batched_curvature,
     compute_projection_bases,
+    compute_projection_bases_gpu,
+    build_layer_cache,
     EPSILON_INV,
 )
 
@@ -99,10 +101,12 @@ def _compute_holonomy_batch(
     device: torch.device,
     layer: Optional[int] = None,
     batch_size: int = 8,
+    layer_cache: list = None,
 ) -> pd.DataFrame:
     """Compute holonomy deviation for a set of conversations.
 
     Uses GPU-batched transport/curvature.
+    If layer_cache is provided, skips recomputing P_stack/proj_bases/U_exp_inv.
     If layer is specified, compute only for that layer.
     """
     n_layers = V.shape[0]
@@ -111,30 +115,29 @@ def _compute_holonomy_batch(
 
     rows = []
     for lay in layers_to_compute:
-        V_layer = np.array(V[lay]).astype(np.float32)
-        V_layer_3d = V_layer[np.newaxis, ...]
-        V_layer_t = torch.as_tensor(V_layer_3d, device=device, dtype=torch.float32)
-
-        P_stack_t = _build_P_stack(V_layer_t, gamma_t, 0, device)
-        proj_bases = compute_projection_bases(V_layer_3d, gamma, 0)
-
-        # --- Batched T1 baseline ---
-        t1_attn_list = []
-        for cid in t1_ids:
-            attn_np = activations[cid]["attention"].astype(np.float32)
-            t1_attn_list.append(torch.as_tensor(attn_np, device=device, dtype=torch.float32))
-        t1_attn_batch = torch.stack(t1_attn_list, dim=0)
-        del t1_attn_list
-
-        u12_t1 = _batched_transport(t1_attn_batch, P_stack_t, gamma_t, 0, 1, lay)
-        u23_t1 = _batched_transport(t1_attn_batch, P_stack_t, gamma_t, 1, 2, lay)
-        t1_products = torch.bmm(u12_t1, u23_t1)
-        U_exp = t1_products.mean(dim=0)
-        del t1_attn_batch, u12_t1, u23_t1, t1_products
-
-        U_exp_inv = torch.linalg.inv(U_exp + EPSILON_INV * torch.eye(
-            U_exp.shape[0], device=device, dtype=torch.float32
-        ))
+        if layer_cache is not None:
+            P_stack_t = layer_cache[lay]["P_stack"]
+            proj_bases = layer_cache[lay]["proj_bases"]
+            U_exp_inv = layer_cache[lay]["U_exp_inv"]
+        else:
+            V_layer = np.array(V[lay]).astype(np.float32)
+            V_layer_3d = V_layer[np.newaxis, ...]
+            V_layer_t = torch.as_tensor(V_layer_3d, device=device, dtype=torch.float32)
+            P_stack_t = _build_P_stack(V_layer_t, gamma_t, 0, device)
+            proj_bases = compute_projection_bases_gpu(V_layer_3d, gamma, 0, device)
+            t1_attn_list = []
+            for cid in t1_ids:
+                attn_np = activations[cid]["attention"].astype(np.float32)
+                t1_attn_list.append(torch.as_tensor(attn_np, device=device, dtype=torch.float32))
+            t1_attn_batch = torch.stack(t1_attn_list, dim=0)
+            del t1_attn_list
+            u12_t1 = _batched_transport(t1_attn_batch, P_stack_t, gamma_t, 0, 1, lay)
+            u23_t1 = _batched_transport(t1_attn_batch, P_stack_t, gamma_t, 1, 2, lay)
+            U_exp = torch.bmm(u12_t1, u23_t1).mean(dim=0)
+            del t1_attn_batch, u12_t1, u23_t1
+            U_exp_inv = torch.linalg.inv(U_exp + EPSILON_INV * torch.eye(
+                U_exp.shape[0], device=device, dtype=torch.float32
+            ))
 
         # --- Batched conversation processing ---
         for batch_start in range(0, len(conv_ids), batch_size):
@@ -171,7 +174,8 @@ def _compute_holonomy_batch(
                 row["curvature_total"] = curvature_total
                 rows.append(row)
 
-        del P_stack_t, U_exp, U_exp_inv, V_layer_t, V_layer, V_layer_3d
+        if layer_cache is None:
+            del P_stack_t, U_exp, U_exp_inv, V_layer_t, V_layer, V_layer_3d
         gc.collect()
 
     del gamma_t
@@ -185,6 +189,7 @@ def cross_scenario_patching(
     device: torch.device,
     n_pairs: int = 10,
     seed: int = 42,
+    layer_cache: list = None,
 ) -> pd.DataFrame:
     """Patch attention from scenario A into scenario B, measure holonomy shift.
 
@@ -223,7 +228,7 @@ def cross_scenario_patching(
     for src_cid, tgt_cid, tgt_sc in pairs:
         # Original holonomy for target
         df_orig = _compute_holonomy_batch(
-            activations, [tgt_cid], gamma, V, t1_ids, device
+            activations, [tgt_cid], gamma, V, t1_ids, device, layer_cache=layer_cache
         )
         orig_total = df_orig["curvature_total"].iloc[0]
 
@@ -232,13 +237,13 @@ def cross_scenario_patching(
         patched_acts[tgt_cid] = {"attention": activations[src_cid]["attention"]}
 
         df_patched = _compute_holonomy_batch(
-            patched_acts, [tgt_cid], gamma, V, t1_ids, device
+            patched_acts, [tgt_cid], gamma, V, t1_ids, device, layer_cache=layer_cache
         )
         patched_total = df_patched["curvature_total"].iloc[0]
 
         # Also get source's original holonomy
         df_src = _compute_holonomy_batch(
-            activations, [src_cid], gamma, V, t1_ids, device
+            activations, [src_cid], gamma, V, t1_ids, device, layer_cache=layer_cache
         )
         src_total = df_src["curvature_total"].iloc[0]
 
@@ -263,6 +268,7 @@ def layer_specific_patching(
     device: torch.device,
     n_samples: int = 5,
     seed: int = 42,
+    layer_cache: list = None,
 ) -> pd.DataFrame:
     """Patch attention at specific layers to identify causal layers.
 
@@ -341,6 +347,7 @@ def standpoint_group_patching(
     device: torch.device,
     n_samples: int = 5,
     seed: int = 42,
+    layer_cache: list = None,
 ) -> pd.DataFrame:
     """Patch attention for heads in specific standpoint groups.
 
@@ -423,11 +430,19 @@ def run_causal_patching(model_name: str, results_dir: Path = RESULTS_DIR) -> dic
     activations, gamma, V, config = _load_data(model_name, device)
     print(f"Loaded {len(activations)} conversations, {len(gamma)} heads")
 
+    # Pre-load V into RAM to avoid mmap I/O overhead
+    print("Pre-loading value matrices into RAM ...")
+    V_ram = np.array(V).astype(np.float32)
+
+    # Build layer cache once (P_stack + proj_bases + U_exp_inv for all layers)
+    t1_activations = {k: v for k, v in activations.items() if k.startswith("T1/")}
+    layer_cache = build_layer_cache(V_ram, gamma, t1_activations, device)
+
     results = {"model": model_name, "n_conversations": len(activations)}
 
     # 1. Cross-scenario patching
     print("\n--- Cross-Scenario Patching ---")
-    df_cross = cross_scenario_patching(activations, gamma, V, device)
+    df_cross = cross_scenario_patching(activations, gamma, V_ram, device, layer_cache=layer_cache)
     if not df_cross.empty:
         mean_delta = df_cross["delta"].mean()
         shifted_pct = df_cross["shifted_toward_source"].mean() * 100
@@ -443,7 +458,7 @@ def run_causal_patching(model_name: str, results_dir: Path = RESULTS_DIR) -> dic
 
     # 2. Layer-specific patching
     print("\n--- Layer-Specific Patching ---")
-    df_layer = layer_specific_patching(activations, gamma, V, device)
+    df_layer = layer_specific_patching(activations, gamma, V_ram, device, layer_cache=layer_cache)
     if not df_layer.empty:
         layer_deltas = df_layer.groupby("layer")["layer_delta"].agg(["mean", "std"])
         most_causal_layer = layer_deltas["mean"].abs().idxmax()
@@ -458,7 +473,7 @@ def run_causal_patching(model_name: str, results_dir: Path = RESULTS_DIR) -> dic
 
     # 3. Standpoint-group patching
     print("\n--- Standpoint-Group Patching ---")
-    df_group = standpoint_group_patching(activations, gamma, V, device)
+    df_group = standpoint_group_patching(activations, gamma, V_ram, device, layer_cache=layer_cache)
     if not df_group.empty:
         group_deltas = df_group.groupby("group")["delta"].agg(["mean", "std"])
         most_causal_group = group_deltas["mean"].abs().idxmax()
