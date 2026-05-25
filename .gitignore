@@ -9,7 +9,6 @@ data/*.npz
 data/gpt2_grouping.npz
 
 # Generated results (reproducible from pipeline)
-results/
 
 # Environment
 .venv/
