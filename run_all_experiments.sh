@@ -8,14 +8,15 @@
 #   3. Set environment variables:
 #        export GITHUB_TOKEN=ghp_xxxxx       # GitHub Personal Access Token (需要 repo 权限)
 #        export HF_TOKEN=hf_xxxxx            # HuggingFace Token (Llama-2 是 gated 模型)
+#        export HF_DATA_REPO=user/lcesa-data # HF dataset repo (数据文件)
 #   4. Run this script:
 #        bash run_all_experiments.sh
 #
 # Expected runtime: ~2-4 hours on A6000 48GB
 # Expected cost: ~$1-3 total
 #
-# 数据文件 (cache/) 不在 git 里，脚本会自动尝试从 HuggingFace Hub 下载。
-# 如果没有上传到 HF，需要手动 scp 上传到 vast.ai 实例。
+# 数据文件 (cache/) 不在 git 里，会自动从 HuggingFace Hub 下载。
+# 先在本地运行 upload_data_to_hf.sh 上传数据。
 # =============================================================================
 
 set -euo pipefail
@@ -96,18 +97,29 @@ done
 
 if [ "$DATA_MISSING" -eq 1 ]; then
     echo ""
-    echo "  Data files missing! Options:"
-    echo "    Option A: Upload from local machine:"
-    echo "      scp -P <PORT> cache/$MODEL/*.npz root@<HOST>:$CACHE_DIR/"
-    echo ""
-    echo "    Option B: Download from HuggingFace Hub (if uploaded):"
-    echo "      huggingface-cli download <HF_DATASET_REPO> --local-dir $CACHE_DIR"
-    echo ""
-    echo "    Option C: Re-extract from model (slow, needs ~14GB VRAM):"
-    echo "      python3 -m experiments.extraction.extract $MODEL"
-    echo ""
-    echo "  Exiting. Please provide data files and re-run."
-    exit 1
+    echo "  Data files missing. Attempting download from HuggingFace Hub ..."
+
+    if [ -z "${HF_DATA_REPO:-}" ]; then
+        echo "  HF_DATA_REPO not set. Set it to your HF dataset repo, e.g.:"
+        echo "    export HF_DATA_REPO=your-username/lcesa-data"
+        echo ""
+        echo "  Or upload data from local machine first:"
+        echo "    bash upload_data_to_hf.sh"
+        echo ""
+        echo "  Then re-run this script."
+        exit 1
+    fi
+
+    echo "  Downloading from $HF_DATA_REPO ..."
+    huggingface-cli download "$HF_DATA_REPO" --repo-type dataset --local-dir .
+
+    # Verify download
+    if [ ! -f "$CACHE_DIR/activations.npz" ]; then
+        echo "  ERROR: Download failed or data not found in repo."
+        echo "  Check that $HF_DATA_REPO contains cache/$MODEL/"
+        exit 1
+    fi
+    echo "  Download complete."
 fi
 
 # Verify GPU
