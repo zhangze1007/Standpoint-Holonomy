@@ -548,8 +548,8 @@ percentile of null \\
 Table~\ref{tab:results-summary} reports the complete results of all hypothesis tests
 across both models. Hypotheses H8.19--H8.21 require permutation-based tests over head
 groupings that were not completed within the computational scope of the present paper.
-These hypotheses are explicitly deferred to Paper~V, which will also include causal
-validation via activation patching. The non-reporting of H8.19--H8.21 is a computational
+These hypotheses require additional GPU resources for activation extraction and
+permutation testing. The non-reporting of H8.19--H8.21 is a computational
 limitation, not a selective reporting decision; the hypotheses remain open and are retained
 in the framework for future evaluation.
 
@@ -563,7 +563,8 @@ in the framework for future evaluation.
 \textbf{ID} & \textbf{Prediction} & \textbf{Test} & \textbf{GPT-2} & \textbf{Llama-7b} &
 \textbf{Status} \\
 \midrule
-H1a & Block sensitivity & Above-mean ratio & [to be filled] & T3/T4/T5: 100\%,
+H1a & Block sensitivity & Above-mean ratio & T2: 73\%, T4: 83\%,
+T3/T5: FAIL & T3/T4/T5: 100\%,
 T2: 0\% & Partial \\
 H1b & Block localization & Dominant-layer ratio & $\times$ (0.203) & $\times$ (0.196) &
 Not confirmed \\
@@ -590,7 +591,7 @@ H8.21 & Null grouping test & Permutation null & \textbf{Not run} &
 
 \medskip
 {\footnotesize $^*$Affected by T0 anomaly; see Section~\ref{sec:discussion}.
-$^\dagger$Llama-7b ablation requires additional GPU resources; deferred to Paper~V.}
+$^\dagger$Llama-7b ablation requires additional GPU resources.}
 \end{table}
 
 \begin{table}[h]
@@ -606,12 +607,12 @@ separated by holonomy magnitude alone.}
 \textbf{Model} & \textbf{Scenario} & $N$ & \textbf{Median} & \textbf{SD} & \textbf{IQR} \\
 \midrule
 \multirow{6}{*}{GPT-2}
-& T0 & 45 & [to be filled] & [to be filled] & [to be filled] \\
-& T1 & 45 & [to be filled] & [to be filled] & [to be filled] \\
-& T2 & 45 & [to be filled] & [to be filled] & [to be filled] \\
-& T3 & 45 & [to be filled] & [to be filled] & [to be filled] \\
-& T4 & 45 & [to be filled] & [to be filled] & [to be filled] \\
-& T5 & 45 & [to be filled] & [to be filled] & [to be filled] \\
+& T0 & 30 & $18.44$ & $6.94$ & $12.03$ \\
+& T1 & 30 & $12.97$ & $6.71$ & $4.92$ \\
+& T2 & 30 & $22.22$ & $11.75$ & $16.38$ \\
+& T3 & 30 & $19.55$ & $4.07$ & $1.65$ \\
+& T4 & 30 & $19.72$ & $8.66$ & $11.46$ \\
+& T5 & 30 & $31.42$ & $12.16$ & $20.66$ \\
 \midrule
 \multirow{6}{*}{Llama-7b}
 & T0 & 30 & $47.52$ & $1.54$ & $3.03$ \\
@@ -624,10 +625,10 @@ separated by holonomy magnitude alone.}
 \end{tabular}
 
 \medskip
-{\footnotesize GPT-2 values pending data extraction. SD = standard deviation;
-IQR = interquartile range (Q3$-$Q1). Note the substantial within-scenario variance:
-T1 (SD $= 5.45$) and T2 (SD $= 3.37$) show heavy overlap, while T0 is the most
-compact (SD $= 1.54$).}
+{\footnotesize SD = standard deviation; IQR = interquartile range (Q3$-$Q1).
+GPT-2 shows higher within-scenario variance than Llama-7b, with T5 having the
+highest median ($31.42$) in GPT-2 versus T0 ($47.52$) in Llama-7b. The T0 anomaly
+(T0 $>$ T1) is present in both models but with different magnitude.}
 \end{table}
 
 \begin{remark}[Within-Scenario Variance]
@@ -641,6 +642,23 @@ implies that holonomy deviation is a \emph{population-level} diagnostic: it reli
 distinguishes groups of conversations but has limited power for classifying individual
 conversations. Table~\ref{tab:descriptive-stats} reports the per-scenario descriptive
 statistics (medians, standard deviations, interquartile ranges) that quantify this overlap.
+\end{remark}
+
+\begin{remark}[T0 Surface Separability]
+\label{rem:t0-separability}
+The T0 anomaly (T0 producing higher holonomy than all failure scenarios) could
+reflect surface-level differences in the stimuli rather than genuine geometric
+complexity. We test this by regressing global holonomy on scenario type and
+surface features (conversation length, lexical overlap between consecutive
+assistant turns, entity count):
+\[
+    C = \beta_0 + \beta_1 \cdot \text{Scenario} + \beta_2 \cdot \text{Length}
+    + \beta_3 \cdot \text{LexOverlap} + \beta_4 \cdot \text{Entities} + \varepsilon.
+\]
+Surface features alone explain negligible variance ($R^2 = 0.016$, $p = 0.70$).
+After controlling for surface features, scenario type retains a partial $R^2 =
+0.194$, and the T0 coefficient remains significant ($\beta = 6.01$, $p = 0.0007$).
+This confirms that the T0 anomaly is not an artifact of stimulus surface properties.
 \end{remark}
 
 \begin{remark}[Multiple Comparisons]

@@ -1,0 +1,140 @@
+{
+  "description": "T0 surface separability regression analysis",
+  "n_observations": 90,
+  "scenarios": [
+    "T0",
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T5"
+  ],
+  "regression_results": {
+    "model1_scenario_only": {
+      "r2": 0.17686560418880293,
+      "adj_r2": 0.12786950920004114,
+      "f_pvalue": 0.005247469003319333,
+      "params": {
+        "Intercept": 42.343642466186296,
+        "is_T0": 5.5887436758592095,
+        "is_T2": 4.527573049141019,
+        "is_T3": 5.315043617669346,
+        "is_T4": 3.9809605781421786,
+        "is_T5": 2.7068769492933007
+      },
+      "pvalues": {
+        "Intercept": 2.5847690247105993e-55,
+        "is_T0": 0.0005175738520954005,
+        "is_T2": 0.004421302357695472,
+        "is_T3": 0.0009249906048694003,
+        "is_T4": 0.0118608324914225,
+        "is_T5": 0.08393354809038918
+      }
+    },
+    "model2_surface_only": {
+      "r2": 0.01618652465746695,
+      "adj_r2": -0.018132550063784336,
+      "f_pvalue": 0.7028320695506274,
+      "params": {
+        "Intercept": 46.030175444537136,
+        "total_length_z": 0.050480256792213796,
+        "avg_turn_length_z": 0.05048025679221446,
+        "lexical_overlap_z": 0.5200747521208422,
+        "entity_count_z": 0.17046519487343822
+      },
+      "pvalues": {
+        "Intercept": 5.227590189434425e-89,
+        "total_length_z": 0.8373516822197309,
+        "avg_turn_length_z": 0.8373516822197288,
+        "lexical_overlap_z": 0.29093531892359803,
+        "entity_count_z": 0.7272556992593552
+      }
+    },
+    "model3_full": {
+      "r2": 0.2066154099173222,
+      "adj_r2": 0.12825643805730458,
+      "f_pvalue": 0.012761908409308262,
+      "params": {
+        "Intercept": 42.40138069884166,
+        "is_T0": 6.013547403111316,
+        "is_T2": 4.931346512694539,
+        "is_T3": 5.8871108144285325,
+        "is_T4": 4.3931752144297,
+        "is_T5": 0.5475885295090066,
+        "total_length_z": -0.6189507891505143,
+        "avg_turn_length_z": -0.61895078915052,
+        "lexical_overlap_z": 0.22686635647943154,
+        "entity_count_z": -0.08610666758826416
+      },
+      "pvalues": {
+        "Intercept": 8.302375851190127e-54,
+        "is_T0": 0.0006712611803280698,
+        "is_T2": 0.002493371089777485,
+        "is_T3": 0.00036362923371105504,
+        "is_T4": 0.006399802260960591,
+        "is_T5": 0.8167614163815772,
+        "total_length_z": 0.1384900900643044,
+        "avg_turn_length_z": 0.13849009006430235,
+        "lexical_overlap_z": 0.6741264289070641,
+        "entity_count_z": 0.8588710725823852
+      }
+    },
+    "partial_r2_scenario_given_surface": 0.19356198103868585
+  },
+  "surface_descriptive": {
+    "T0": {
+      "n": 15,
+      "total_length_mean": 1020.2666666666667,
+      "total_length_std": 98.19548045074366,
+      "lexical_overlap_mean": 0.1449072966335132,
+      "lexical_overlap_std": 0.050389085167392586,
+      "entity_count_mean": 11.6,
+      "entity_count_std": 9.477793594955074
+    },
+    "T1": {
+      "n": 15,
+      "total_length_mean": 960.3333333333334,
+      "total_length_std": 123.16752045583321,
+      "lexical_overlap_mean": 0.11503716392711377,
+      "lexical_overlap_std": 0.05913309583884964,
+      "entity_count_mean": 7.4,
+      "entity_count_std": 5.422176684690384
+    },
+    "T2": {
+      "n": 15,
+      "total_length_mean": 996.7333333333333,
+      "total_length_std": 88.35922351940617,
+      "lexical_overlap_mean": 0.09256140746497263,
+      "lexical_overlap_std": 0.02884122713174771,
+      "entity_count_mean": 5.866666666666666,
+      "entity_count_std": 2.0307165050320353
+    },
+    "T3": {
+      "n": 15,
+      "total_length_mean": 1017.5333333333333,
+      "total_length_std": 59.24509222189592,
+      "lexical_overlap_mean": 0.09956607401580389,
+      "lexical_overlap_std": 0.02964239958349183,
+      "entity_count_mean": 7.6,
+      "entity_count_std": 6.4231723359367265
+    },
+    "T4": {
+      "n": 15,
+      "total_length_mean": 1007.6,
+      "total_length_std": 64.75646685853081,
+      "lexical_overlap_mean": 0.1124798625918029,
+      "lexical_overlap_std": 0.04112017967915754,
+      "entity_count_mean": 6.933333333333334,
+      "entity_count_std": 6.192929916637273
+    },
+    "T5": {
+      "n": 15,
+      "total_length_mean": 688.8666666666667,
+      "total_length_std": 49.523250912600446,
+      "lexical_overlap_mean": 0.07595215385463064,
+      "lexical_overlap_std": 0.023154553213107644,
+      "entity_count_mean": 5.733333333333333,
+      "entity_count_std": 1.3345232785352157
+    }
+  }
+}

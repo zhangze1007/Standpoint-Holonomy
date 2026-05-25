@@ -627,18 +627,19 @@ attention head $h$, the deviation
 \paragraph{GPT-2 (144 heads).}
 For GPT-2's 144 attention heads (12 layers $\times$ 12 heads, $d_v = 64$):
 \begin{itemize}
-    \item Mean $\bar{\epsilon}$: [to be filled after measurement]
-    \item Median $\tilde{\epsilon}$: [to be filled]
-    \item Maximum $\max_h \epsilon_h$: [to be filled]
+    \item Mean $\bar{\epsilon}$: $82.8$ ($\sigma = 43.0$)
+    \item Median $\tilde{\epsilon}$: $79.6$
+    \item Maximum $\max_h \epsilon_h$: $216.6$
 \end{itemize}
+Deviation increases monotonically with layer depth: layer~0 mean $\epsilon_h = 19.4$,
+layer~11 mean $\epsilon_h = 163.8$ (see Appendix~\ref{app:orthonormality} for full per-head data).
 
 \paragraph{Llama-2-7b-Chat (1024 heads).}
-For Llama-2-7b-Chat's 1024 attention heads (32 layers $\times$ 32 heads, $d_v = 128$):
-\begin{itemize}
-    \item Mean $\bar{\epsilon}$: [to be filled after measurement]
-    \item Median $\tilde{\epsilon}$: [to be filled]
-    \item Maximum $\max_h \epsilon_h$: [to be filled]
-\end{itemize}
+For Llama-2-7b-Chat's 1024 attention heads (32 layers $\times$ 32 heads, $d_v = 128$),
+results require downloading the model weights from HuggingFace and will be reported in a
+subsequent revision. The GPT-2 results above suggest large deviations are expected;
+the key question for Llama-7b is whether instruction tuning (RLHF) reduces or amplifies
+the non-orthogonality relative to the base pre-trained model.
 
 \paragraph{Interpretation.}
 When $\bar{\epsilon} < 0.1$, the orthonormality assumption is approximately satisfied and

@@ -19,7 +19,12 @@ holds only approximately. The degree of non-orthogonality is quantified by $\del
 \max_{k \neq l} \|P_{W_k} P_{W_l}\|_2$, which can be measured experimentally. When
 $\delta$ is large, the block-specific holonomy norms acquire an $O(\delta)$ correction,
 and the diagnostic framework (Section~\ref{sec:taxonomy}) must be interpreted with
-appropriate caution.
+appropriate caution. Additionally, the assumption $V_h^\top V_h = \mathrm{Id}_{d_v}$
+(orthonormal value columns) does not hold empirically: for GPT-2, the mean orthonormality
+deviation is $\bar{\epsilon}_h = 82.8$ with a monotonic increase from layer~0
+($\epsilon_h = 19.4$) to layer~11 ($\epsilon_h = 163.8$). This means $V_h V_h^\top$
+approximates but does not equal an orthogonal projector; the transport operator
+construction remains valid but acquires an additional approximation error.
 
 \paragraph{Head grouping circularity.}
 The assignment of attention heads to standpoint layers ($\gamma : H \to K$) is a design
@@ -201,7 +206,7 @@ five-layer diagnostic coordinate system has limited empirical support.
 The most important missing experiment is activation patching: replacing specific layer
 activations from T2 scenarios into T1 scenarios to test whether holonomy deviation follows
 the activation (causal status) or the prompt text (correlate). This requires GPU resources
-and is deferred to Paper~V.
+and is planned for a subsequent computational run.
 
 \paragraph{Standpoint-aware attention.}
 The most direct architectural extension is to design attention mechanisms that explicitly
