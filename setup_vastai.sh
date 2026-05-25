@@ -21,12 +21,8 @@ pip install -r requirements.txt
 echo "[2/4] HuggingFace authentication..."
 echo "You need a HuggingFace token with access to meta-llama/Llama-2-7b-chat-hf"
 echo "Get one at: https://huggingface.co/settings/tokens"
-if command -v huggingface-cli &> /dev/null; then
-    huggingface-cli login
-else
-    pip install huggingface_hub
-    huggingface-cli login
-fi
+pip install -q huggingface_hub
+python3 -c "from huggingface_hub import login; login()"
 
 # 3. Verify GPU
 echo "[3/4] Checking GPU..."

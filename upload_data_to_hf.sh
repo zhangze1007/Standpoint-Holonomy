@@ -4,7 +4,7 @@
 # =============================================================================
 # Usage:
 #   pip install huggingface_hub
-#   huggingface-cli login
+#   python3 -c "from huggingface_hub import login; login()"
 #   bash upload_data_to_hf.sh [HF_REPO_ID]
 #
 # Default repo: <your-username>/lcesa-data
@@ -29,12 +29,12 @@ echo "  Target: $HF_REPO (private dataset)"
 echo ""
 
 # Check HF login
-if ! huggingface-cli whoami > /dev/null 2>&1; then
-    echo "ERROR: Not logged in to HuggingFace. Run: huggingface-cli login"
+HF_USER=$(python3 -c "from huggingface_hub import HfApi; print(HfApi().whoami()['name'])" 2>/dev/null)
+if [ -z "$HF_USER" ]; then
+    echo "ERROR: Not logged in to HuggingFace. Run: python3 -c \"from huggingface_hub import login; login()\""
     exit 1
 fi
 
-HF_USER=$(huggingface-cli whoami 2>/dev/null | head -1)
 FULL_REPO="${HF_USER}/${HF_REPO}"
 echo "  Repo: $FULL_REPO"
 echo ""
@@ -91,4 +91,4 @@ echo ""
 echo "Done! Data uploaded to: https://huggingface.co/datasets/$FULL_REPO"
 echo ""
 echo "On vast.ai, download with:"
-echo "  huggingface-cli download $FULL_REPO --repo-type dataset --local-dir cache"
+echo "  python3 -c \"from huggingface_hub import snapshot_download; snapshot_download(repo_id='$FULL_REPO', repo_type='dataset', local_dir='cache')\""

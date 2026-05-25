@@ -71,7 +71,7 @@ pip install -q torch transformers accelerate bitsandbytes \
 # HuggingFace authentication (needed for gated models like Llama-2)
 if [ -n "${HF_TOKEN:-}" ]; then
     echo "  HF_TOKEN found, logging in ..."
-    huggingface-cli login --token "$HF_TOKEN" --add-to-git-credential 2>/dev/null
+    python3 -c "from huggingface_hub import login; login(token='$HF_TOKEN')"
 else
     echo "  WARNING: HF_TOKEN not set. Experiment F will fail for gated models."
     echo "  Set with: export HF_TOKEN=hf_xxxxx"
@@ -100,18 +100,15 @@ if [ "$DATA_MISSING" -eq 1 ]; then
     echo "  Data files missing. Attempting download from HuggingFace Hub ..."
 
     if [ -z "${HF_DATA_REPO:-}" ]; then
-        echo "  HF_DATA_REPO not set. Set it to your HF dataset repo, e.g.:"
-        echo "    export HF_DATA_REPO=your-username/lcesa-data"
-        echo ""
-        echo "  Or upload data from local machine first:"
-        echo "    bash upload_data_to_hf.sh"
-        echo ""
-        echo "  Then re-run this script."
-        exit 1
+        HF_DATA_REPO="zhangze1007/lcesa-activations"
+        echo "  HF_DATA_REPO not set, using default: $HF_DATA_REPO"
     fi
 
     echo "  Downloading from $HF_DATA_REPO ..."
-    huggingface-cli download "$HF_DATA_REPO" --repo-type dataset --local-dir .
+    python3 -c "
+from huggingface_hub import snapshot_download
+snapshot_download(repo_id='$HF_DATA_REPO', repo_type='dataset', local_dir='.')
+"
 
     # Verify download
     if [ ! -f "$CACHE_DIR/activations.npz" ]; then
@@ -133,20 +130,40 @@ else:
 "
 
 # -------------------------------------------
-# Step 1: Experiment B — Null Grouping Controls
+# Step 1: Main Pipeline (generates curvature CSV for C/G/H)
 # -------------------------------------------
 echo ""
-echo "[Step 1/7] Experiment B: Null Grouping Controls"
+echo "[Step 1/11] Main Pipeline (curvature, probing, CKA, hypothesis tests)"
+echo "  ETA: ~2-3 hours"
+python3 -m experiments.pipeline "$MODEL" \
+    2>&1 | tee "$LOG_DIR/pipeline.log"
+echo "  Done: Pipeline"
+
+# -------------------------------------------
+# Step 2: Experiment A — Baseline Ensemble
+# -------------------------------------------
+echo ""
+echo "[Step 2/11] Experiment A: Baseline Ensemble (5 random U_exp subsets)"
+echo "  ETA: ~30 min"
+python3 -m experiments.experiment_a_baseline_ensemble "$MODEL" \
+    2>&1 | tee "$LOG_DIR/experiment_a.log"
+echo "  Done: Experiment A"
+
+# -------------------------------------------
+# Step 3: Experiment B — Null Grouping Controls
+# -------------------------------------------
+echo ""
+echo "[Step 3/11] Experiment B: Null Grouping Controls"
 echo "  ETA: ~30-60 min"
 python3 -m experiments.experiment_b_null_grouping "$MODEL" \
     2>&1 | tee "$LOG_DIR/experiment_b.log"
 echo "  Done: Experiment B"
 
 # -------------------------------------------
-# Step 2: Ablation Study
+# Step 4: Ablation Study
 # -------------------------------------------
 echo ""
-echo "[Step 2/7] Ablation Study (layer drop + sequence length)"
+echo "[Step 4/11] Ablation Study (layer drop + sequence length)"
 echo "  ETA: ~20-40 min"
 python3 -c "
 from experiments.ablation import run_ablation_study
@@ -160,41 +177,41 @@ run_ablation_study(
 echo "  Done: Ablation"
 
 # -------------------------------------------
-# Step 3: Permutation Test
+# Step 5: Permutation Test
 # -------------------------------------------
 echo ""
-echo "[Step 3/7] Permutation Test (1000 head permutations)"
+echo "[Step 5/11] Permutation Test (1000 head permutations)"
 echo "  ETA: ~10-20 min"
 python3 -m experiments.baselines.permutation "$MODEL" \
     2>&1 | tee "$LOG_DIR/permutation.log"
 echo "  Done: Permutation"
 
 # -------------------------------------------
-# Step 4: Experiment E — T0 Separability
+# Step 6: Experiment E — T0 Separability
 # -------------------------------------------
 echo ""
-echo "[Step 4/7] Experiment E: T0 Separability (OLS regression)"
+echo "[Step 6/11] Experiment E: T0 Separability (OLS regression)"
 echo "  ETA: ~1 min"
 python3 -m experiments.experiment_e_t0_separability \
     2>&1 | tee "$LOG_DIR/experiment_e.log"
 echo "  Done: Experiment E"
 
 # -------------------------------------------
-# Step 5: Experiment D — Competitive Baselines
+# Step 7: Experiment D — Competitive Baselines
 # -------------------------------------------
 echo ""
-echo "[Step 5/7] Experiment D: Competitive Baselines"
+echo "[Step 7/11] Experiment D: Competitive Baselines"
 echo "  ETA: ~5-10 min"
 python3 -m experiments.experiment_d_competitive_baselines "$MODEL" \
     2>&1 | tee "$LOG_DIR/experiment_d.log"
 echo "  Done: Experiment D"
 
 # -------------------------------------------
-# Step 6: Experiment F — Orthonormality
+# Step 8: Experiment F — Orthonormality
 # (Requires model weights — needs HF_TOKEN for gated models)
 # -------------------------------------------
 echo ""
-echo "[Step 6/7] Experiment F: Orthonormality"
+echo "[Step 8/11] Experiment F: Orthonormality"
 echo "  ETA: ~5-10 min"
 if [ -n "${HF_TOKEN:-}" ] || python3 -c "
 from transformers import AutoConfig
@@ -213,21 +230,52 @@ else
 fi
 
 # -------------------------------------------
-# Step 7: Causal Activation Patching
+# Step 9: Causal Activation Patching
 # -------------------------------------------
 echo ""
-echo "[Step 7/7] Causal Activation Patching"
+echo "[Step 9/11] Causal Activation Patching"
 echo "  ETA: ~30-60 min"
 python3 -m experiments.causal_patching "$MODEL" \
     2>&1 | tee "$LOG_DIR/causal_patching.log"
 echo "  Done: Causal Patching"
 
 # -------------------------------------------
+# Step 10: Experiment C — PCA Decomposition
+# (Needs curvature CSV from pipeline)
+# -------------------------------------------
+echo ""
+echo "[Step 10/11] Experiment C: PCA Decomposition of Block Holonomy"
+echo "  ETA: ~5 min"
+python3 -m experiments.experiment_c_pca "$MODEL" \
+    2>&1 | tee "$LOG_DIR/experiment_c.log"
+echo "  Done: Experiment C"
+
+# -------------------------------------------
+# Step 11: Experiment G — GPT-2 Descriptive Stats & H1a
+# -------------------------------------------
+echo ""
+echo "[Step 11a/11] Experiment G: Descriptive Statistics & H1a"
+echo "  ETA: ~5 min"
+python3 -m experiments.experiment_g_gpt2_stats "$MODEL" \
+    2>&1 | tee "$LOG_DIR/experiment_g.log"
+echo "  Done: Experiment G"
+
+# -------------------------------------------
+# Step 11b: Experiment H — T0 Pairwise Comparisons
+# -------------------------------------------
+echo ""
+echo "[Step 11b/11] Experiment H: T0 Pairwise Comparisons"
+echo "  ETA: ~5 min"
+python3 -m experiments.experiment_h_t0_pairwise "$MODEL" \
+    2>&1 | tee "$LOG_DIR/experiment_h.log"
+echo "  Done: Experiment H"
+
+# -------------------------------------------
 # Summary
 # -------------------------------------------
 echo ""
 echo "============================================"
-echo "All 7 experiments complete!"
+echo "All 11 experiments complete!"
 echo "============================================"
 echo "End: $(date)"
 echo ""
