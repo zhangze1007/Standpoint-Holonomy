@@ -1,0 +1,26 @@
+=== Experiment B: Null Grouping Controls (llama-7b) ===
+
+  Device: cuda
+Loading activations and grouping ...
+  Pre-loading value matrices into RAM ...
+  Loaded 180 conversations, 32 heads, 32 layers
+
+Computing holonomy with learned gamma ...
+  Learned γ: H3 ε² = 0.4200
+
+Generating null groupings (20 instances each) ...
+  Using n_null=20 (set LCESA_N_NULL env var to override)
+
+  Testing random null groupings ...
+    5/20: ε² = 0.4222
+    10/20: ε² = 0.4222
+    15/20: ε² = 0.4200
+    20/20: ε² = 0.4200
+
+  Testing shuffled null groupings ...
+    5/20: ε² = 0.4201
+    10/20: ε² = 0.4200
+    15/20: ε² = 0.4197
+    20/20: ε² = 0.4223
+
+  Testing layer_uniform null groupings ...
