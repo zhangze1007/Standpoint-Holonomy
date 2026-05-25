@@ -1,0 +1,8 @@
+Ablation using device: cuda
+  Layer ablation: n_keep=3 (GPU batched)
+  Layer ablation: n_keep=5 (GPU batched)
+  Layer ablation: n_keep=7 (GPU batched)
+  Sequence ablation: n_events=3 (GPU batched)
+  Sequence ablation: n_events=5 (GPU batched)
+  Skipping sequence_length=8: stimuli have only 5 events
+Ablation results: 14220 rows -> /workspace/Low-Curvature-Endogenous-Standpoint-Attractor/results/llama-7b_ablation.csv

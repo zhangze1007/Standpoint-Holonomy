@@ -1,0 +1,25 @@
+============================================
+LCESA Experiment Suite
+============================================
+[Setup] Repo already exists, pulling latest ...
+Already up to date.
+Model: llama-7b
+Log dir: Low-Curvature-Endogenous-Standpoint-Attractor/logs_20260525_043007
+GPU: NVIDIA RTX A6000, 49140 MiB
+Start: Mon May 25 04:30:08 UTC 2026
+============================================
+
+[Step 0] Setting up environment ...
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+  WARNING: HF_TOKEN not set. Experiment F will fail for gated models.
+  Set with: export HF_TOKEN=hf_xxxxx
+
+[Step 0b] Checking data files ...
+  MISSING: cache/llama-7b/activations.npz
+  MISSING: cache/llama-7b/llama-7b_grouping.npz
+
+  Data files missing. Attempting download from HuggingFace Hub ...
+  Downloading from zhangze1007/lcesa-activations ...
+Fetching 4 files:   0%|                                                                                                                                 | 0/4 [00:00<?, ?it/s]Fetching 4 files:  50%|████████████████████████████████████████████████████████████▌                                                            | 2/4 [00:15<00:15,  7.95s/it]Fetching 4 files: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 4/4 [00:15<00:00,  3.97s/it]
+  ERROR: Download failed or data not found in repo.
+  Check that zhangze1007/lcesa-activations contains cache/llama-7b/

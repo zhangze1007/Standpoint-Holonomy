@@ -1,0 +1,6 @@
+=== Experiment B: Null Grouping Controls (llama-7b) ===
+
+Loading activations and grouping ...
+  Loaded 180 conversations, 32 heads, 32 layers
+
+Computing holonomy with learned gamma ...

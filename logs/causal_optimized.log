@@ -1,0 +1,26 @@
+=== Causal Activation Patching (llama-7b) ===
+
+Device: cuda
+Loaded 180 conversations, 32 heads
+Pre-loading value matrices into RAM ...
+  Building layer cache (32 layers) ...
+    cached 8/32 layers
+    cached 16/32 layers
+    cached 24/32 layers
+    cached 32/32 layers
+  Layer cache ready.
+
+--- Cross-Scenario Patching ---
+  Running 50 cross-scenario patches ...
+  Mean holonomy delta: -0.7269
+  Shifted toward source: 100.0%
+
+--- Layer-Specific Patching ---
+  Layer-specific patching: 32 layers, 5 samples each ...
+  Most causal layer: 31 (mean delta: -6.1937)
+
+--- Standpoint-Group Patching ---
+  Group patching: 5 groups, 5 samples ...
+  Most causal group: pos (mean delta: -0.0799)
+
+Results saved to /workspace/Low-Curvature-Endogenous-Standpoint-Attractor/results/llama-7b_causal_patching.json
