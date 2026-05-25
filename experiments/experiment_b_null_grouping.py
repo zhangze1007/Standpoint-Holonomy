@@ -253,6 +253,9 @@ def run_experiment_b(model_name: str, results_dir: Path = RESULTS_DIR) -> dict:
     """
     print(f"=== Experiment B: Null Grouping Controls ({model_name}) ===\n")
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"  Device: {device}")
+
     activations_path = CACHE_DIR / model_name / "activations.npz"
     gamma_path = CACHE_DIR / model_name / f"{model_name}_grouping.npz"
 
