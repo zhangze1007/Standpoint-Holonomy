@@ -1,27 +1,56 @@
 #!/usr/bin/env bash
 # =============================================================================
-# LCESA: One-Click Experiment Runner for vast.ai
+# LCESA: One-Click Experiment Runner for vast.ai (Private Repo)
 # =============================================================================
 # Usage:
 #   1. Rent an A6000 48GB or A100 40GB instance on vast.ai
-#   2. Clone repo: git clone https://github.com/<user>/Low-Curvature-Endogenous-Standpoint-Attractor.git
-#   3. cd Low-Curvature-Endogenous-Standpoint-Attractor
-#   4. Set HF_TOKEN if using gated models: export HF_TOKEN=hf_xxxxx
-#   5. bash run_all_experiments.sh
+#   2. SSH into the instance
+#   3. Set environment variables:
+#        export GITHUB_TOKEN=ghp_xxxxx       # GitHub Personal Access Token (需要 repo 权限)
+#        export HF_TOKEN=hf_xxxxx            # HuggingFace Token (Llama-2 是 gated 模型)
+#   4. Run this script:
+#        bash run_all_experiments.sh
 #
 # Expected runtime: ~2-4 hours on A6000 48GB
 # Expected cost: ~$1-3 total
+#
+# 数据文件 (cache/) 不在 git 里，脚本会自动尝试从 HuggingFace Hub 下载。
+# 如果没有上传到 HF，需要手动 scp 上传到 vast.ai 实例。
 # =============================================================================
 
 set -euo pipefail
 
 MODEL="llama-7b"
-LOG_DIR="logs_$(date +%Y%m%d_%H%M%S)"
-mkdir -p "$LOG_DIR"
+REPO_URL="https://github.com/zhangze1007/Low-Curvature-Endogenous-Standpoint-Attractor.git"
+REPO_DIR="Low-Curvature-Endogenous-Standpoint-Attractor"
+LOG_DIR="$REPO_DIR/logs_$(date +%Y%m%d_%H%M%S)"
 
+# -------------------------------------------
+# Step 0: Clone repo (private, needs GITHUB_TOKEN)
+# -------------------------------------------
 echo "============================================"
 echo "LCESA Experiment Suite"
 echo "============================================"
+
+if [ -z "${GITHUB_TOKEN:-}" ]; then
+    echo "ERROR: GITHUB_TOKEN not set."
+    echo "  Create a Personal Access Token at: https://github.com/settings/tokens"
+    echo "  Needs 'repo' scope for private repos."
+    echo "  Then: export GITHUB_TOKEN=ghp_xxxxx"
+    exit 1
+fi
+
+if [ ! -d "$REPO_DIR" ]; then
+    echo "[Setup] Cloning private repo ..."
+    git clone "https://${GITHUB_TOKEN}@github.com/zhangze1007/Low-Curvature-Endogenous-Standpoint-Attractor.git"
+else
+    echo "[Setup] Repo already exists, pulling latest ..."
+    cd "$REPO_DIR" && git pull && cd ..
+fi
+
+cd "$REPO_DIR"
+mkdir -p "$LOG_DIR"
+
 echo "Model: $MODEL"
 echo "Log dir: $LOG_DIR"
 echo "GPU: $(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader 2>/dev/null || echo 'N/A')"
@@ -43,8 +72,42 @@ if [ -n "${HF_TOKEN:-}" ]; then
     echo "  HF_TOKEN found, logging in ..."
     huggingface-cli login --token "$HF_TOKEN" --add-to-git-credential 2>/dev/null
 else
-    echo "  WARNING: HF_TOKEN not set. Experiment F (orthonormality) will fail for gated models."
+    echo "  WARNING: HF_TOKEN not set. Experiment F will fail for gated models."
     echo "  Set with: export HF_TOKEN=hf_xxxxx"
+fi
+
+# -------------------------------------------
+# Step 0b: Check / download data files
+# -------------------------------------------
+echo ""
+echo "[Step 0b] Checking data files ..."
+
+CACHE_DIR="$REPO_DIR/cache/$MODEL"
+DATA_MISSING=0
+
+for f in "activations.npz" "${MODEL}_grouping.npz"; do
+    if [ ! -f "$CACHE_DIR/$f" ]; then
+        echo "  MISSING: $CACHE_DIR/$f"
+        DATA_MISSING=1
+    else
+        echo "  OK: $CACHE_DIR/$f ($(du -h "$CACHE_DIR/$f" | cut -f1))"
+    fi
+done
+
+if [ "$DATA_MISSING" -eq 1 ]; then
+    echo ""
+    echo "  Data files missing! Options:"
+    echo "    Option A: Upload from local machine:"
+    echo "      scp -P <PORT> cache/$MODEL/*.npz root@<HOST>:$CACHE_DIR/"
+    echo ""
+    echo "    Option B: Download from HuggingFace Hub (if uploaded):"
+    echo "      huggingface-cli download <HF_DATASET_REPO> --local-dir $CACHE_DIR"
+    echo ""
+    echo "    Option C: Re-extract from model (slow, needs ~14GB VRAM):"
+    echo "      python3 -m experiments.extraction.extract $MODEL"
+    echo ""
+    echo "  Exiting. Please provide data files and re-run."
+    exit 1
 fi
 
 # Verify GPU
@@ -57,35 +120,11 @@ else:
     print('  WARNING: No GPU detected. GPU experiments will be slow or fail.')
 "
 
-# Verify data files
-echo ""
-echo "[Step 0] Checking data files ..."
-python3 -c "
-from pathlib import Path
-cache = Path('cache/$MODEL')
-needed = ['activations.npz', '${MODEL}_grouping.npz']
-for f in needed:
-    p = cache / f
-    if p.exists():
-        print(f'  OK: {p} ({p.stat().st_size / 1e6:.1f} MB)')
-    else:
-        print(f'  MISSING: {p}')
-
-# Check split files (optional, for memory optimization)
-attn = cache / 'attention_only.npz'
-vdir = cache / 'value_layers'
-if attn.exists():
-    print(f'  OK: {attn} ({attn.stat().st_size / 1e6:.1f} MB)')
-if vdir.exists():
-    n = len(list(vdir.glob('layer_*.npy')))
-    print(f'  OK: {vdir}/ ({n} layer files)')
-"
-
 # -------------------------------------------
 # Step 1: Experiment B — Null Grouping Controls
 # -------------------------------------------
 echo ""
-echo "[Step 1/6] Experiment B: Null Grouping Controls"
+echo "[Step 1/7] Experiment B: Null Grouping Controls"
 echo "  ETA: ~30-60 min"
 python3 -m experiments.experiment_b_null_grouping "$MODEL" \
     2>&1 | tee "$LOG_DIR/experiment_b.log"
@@ -95,7 +134,7 @@ echo "  Done: Experiment B"
 # Step 2: Ablation Study
 # -------------------------------------------
 echo ""
-echo "[Step 2/6] Ablation Study (layer drop + sequence length)"
+echo "[Step 2/7] Ablation Study (layer drop + sequence length)"
 echo "  ETA: ~20-40 min"
 python3 -c "
 from experiments.ablation import run_ablation_study
@@ -112,7 +151,7 @@ echo "  Done: Ablation"
 # Step 3: Permutation Test
 # -------------------------------------------
 echo ""
-echo "[Step 3/6] Permutation Test (1000 head permutations)"
+echo "[Step 3/7] Permutation Test (1000 head permutations)"
 echo "  ETA: ~10-20 min"
 python3 -m experiments.baselines.permutation "$MODEL" \
     2>&1 | tee "$LOG_DIR/permutation.log"
@@ -122,7 +161,7 @@ echo "  Done: Permutation"
 # Step 4: Experiment E — T0 Separability
 # -------------------------------------------
 echo ""
-echo "[Step 4/6] Experiment E: T0 Separability (OLS regression)"
+echo "[Step 4/7] Experiment E: T0 Separability (OLS regression)"
 echo "  ETA: ~1 min"
 python3 -m experiments.experiment_e_t0_separability \
     2>&1 | tee "$LOG_DIR/experiment_e.log"
@@ -132,7 +171,7 @@ echo "  Done: Experiment E"
 # Step 5: Experiment D — Competitive Baselines
 # -------------------------------------------
 echo ""
-echo "[Step 5/6] Experiment D: Competitive Baselines"
+echo "[Step 5/7] Experiment D: Competitive Baselines"
 echo "  ETA: ~5-10 min"
 python3 -m experiments.experiment_d_competitive_baselines "$MODEL" \
     2>&1 | tee "$LOG_DIR/experiment_d.log"
@@ -143,7 +182,7 @@ echo "  Done: Experiment D"
 # (Requires model weights — needs HF_TOKEN for gated models)
 # -------------------------------------------
 echo ""
-echo "[Step 6/6] Experiment F: Orthonormality"
+echo "[Step 6/7] Experiment F: Orthonormality"
 echo "  ETA: ~5-10 min"
 if [ -n "${HF_TOKEN:-}" ] || python3 -c "
 from transformers import AutoConfig
