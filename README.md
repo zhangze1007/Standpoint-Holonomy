@@ -1,4 +1,12 @@
-# LCESA: Low-Curvature Endogenous Standpoint Attractor
+# Standpoint Holonomy
+
+> **Renamed 2026-07** (formerly *LCESA: Low-Curvature Endogenous Standpoint Attractor*).
+> The project is transitioning to the **Geometric Selfhood** program — selfhood as the invariants
+> of standpoint transport. Rebuild design:
+> [`docs/superpowers/specs/2026-07-09-standpoint-holonomy-program-design.md`](docs/superpowers/specs/2026-07-09-standpoint-holonomy-program-design.md) ·
+> theory: [`2026-07-09-theory-architecture-v0.1.md`](docs/superpowers/specs/2026-07-09-theory-architecture-v0.1.md).
+> ⚠️ The results below were produced by the pre-rebuild pipeline and are **undergoing internal
+> re-verification**; treat them as preliminary until the verification note lands here.
 
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C?style=flat-square&logo=pytorch&logoColor=white)
@@ -138,8 +146,8 @@ Core findings replicate across model families, with Llama-2-7b showing stronger 
 
 ```bash
 # Clone repository
-git clone https://github.com/zhangze1007/Low-Curvature-Endogenous-Standpoint-Attractor.git
-cd Low-Curvature-Endogenous-Standpoint-Attractor
+git clone https://github.com/zhangze1007/standpoint-holonomy.git
+cd standpoint-holonomy
 
 # Install dependencies
 pip install -r requirements.txt
