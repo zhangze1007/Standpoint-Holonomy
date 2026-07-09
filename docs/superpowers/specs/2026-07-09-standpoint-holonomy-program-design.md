@@ -16,7 +16,10 @@
 | 核心量 | **Consistency Spectrum(一致性谱)** | $\mathrm{CS} = (\lambda, \tau, \rho_{\mathrm{nc}}, \mu)$:泄漏、畸变、非对易占比、全局障碍 |
 
 LCESA 名称退役(理由存档:吸引子未证却入名、low-curvature 预设结论、缩写不可检索)。
-仓库更名为 `standpoint-holonomy` 在 W6 论文定稿时执行(避免中途链接断裂)。
+仓库更名为 `standpoint-holonomy` 于 **W0 立即执行**(GitHub 自动永久重定向兜底旧链接;
+关键顺序约束:arXiv 预印本必须从挂出第一天起指向新名,故更名必须先于 W1 后的 arXiv v1)。
+同步更名项:README 标题、notebooks 内 clone URL、论文草稿内自指、HF 数据集
+(新产物建新数据集 `standpoint-holonomy-artifacts`,旧 lcesa-activations 作为审计证据存档不动)。
 
 ## 1. 目标与决策记录
 
