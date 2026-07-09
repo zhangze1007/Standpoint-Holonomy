@@ -1,6 +1,13 @@
 # 设计文档:Geometric Selfhood 纲领 · Standpoint Holonomy 框架(v1.0)
 
-> 日期:2026-07-09 · 状态:待用户审阅
+> ⚠️ **对账通知(2026-07-09 推送时发现)**:本文档与此前全部审计(docs/audit/)基于本地基线
+> fdfa163;推送时发现远端另有 **45 个未审计提交**(2026-05-14 起的 vast.ai 实验线:LLaMA-7B
+> 全量结果、因果 patching、null grouping 对照、T0 阴性对照、GPT-2 V 矩阵修复、global-signal
+> 重定框)。后果:§3 组件表中 C8/C14 "新建"判断失效(已有未审计实现);null grouping 结果
+> (任意头分组产生相同 ε²)直接挑战 P2 并支持全局层(sheaf μ)的优先级。
+> **需要 delta 审计 + 本文档 v1.1 修订后再进入 writing-plans。**
+>
+> 日期:2026-07-09 · 状态:待用户审阅 + 待 delta 对账
 > 前置文档:理论架构 `2026-07-09-theory-architecture-v0.1.md`(13/13 数值验证通过);
 > 审计基线 `docs/audit/00-claims.md`、`01-theory-code.md`、`02-numerics.md`(部分)。
 > 本文档是 brainstorming 阶段的产出,批准后移交 writing-plans 生成实施计划。
